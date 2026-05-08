@@ -1,0 +1,138 @@
+:root,
+page {
+  --ios-blue: #0a84ff;
+  --ios-bg: #f2f2f7;
+  --ios-card: #ffffff;
+  --ios-text: #111827;
+  --ios-subtext: #6b7280;
+  --ios-divider: rgba(17, 24, 39, 0.08);
+  --ios-shadow: 0 10rpx 26rpx rgba(0, 0, 0, 0.06);
+  --ios-shadow-strong: 0 12rpx 32rpx rgba(0, 0, 0, 0.08);
+}
+
+.ios-page {
+  min-height: 100vh;
+  background: var(--ios-bg);
+}
+
+.ios-title {
+  font-size: 44rpx;
+  font-weight: 700;
+  color: var(--ios-text);
+  letter-spacing: -0.02em;
+}
+
+.ios-subtitle {
+  font-size: 26rpx;
+  color: var(--ios-subtext);
+  line-height: 1.5;
+}
+
+.ios-card {
+  background: var(--ios-card);
+  border-radius: 32rpx;
+  box-shadow: var(--ios-shadow);
+  overflow: hidden;
+}
+
+.ios-divider {
+  height: 1px;
+  background: var(--ios-divider);
+}
+
+.ios-cell {
+  display: flex;
+  align-items: center;
+  padding: 22rpx 28rpx;
+}
+
+.ios-cell--focused {
+  background: rgba(10, 132, 255, 0.06);
+}
+
+.ios-cell__label {
+  width: 120rpx;
+  font-size: 28rpx;
+  color: var(--ios-text);
+}
+
+.ios-cell__content {
+  flex: 1;
+}
+
+.ios-input {
+  width: 100%;
+  font-size: 28rpx;
+  color: var(--ios-text);
+}
+
+.ios-btn {
+  border-radius: 28rpx;
+  padding: 22rpx 24rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.ios-btn[disabled] {
+  opacity: 0.6;
+}
+
+.ios-btn--primary {
+  background: var(--ios-blue);
+  color: #ffffff;
+}
+
+.ios-btn--secondary {
+  background: rgba(17, 24, 39, 0.06);
+  color: var(--ios-text);
+}
+
+.ios-btn--tertiary {
+  background: transparent;
+  color: var(--ios-subtext);
+}
+
+.ios-btn:active {
+  transform: scale(0.99);
+  opacity: 0.92;
+}
+
+.ios-seg {
+  background: rgba(17, 24, 39, 0.06);
+  border-radius: 28rpx;
+  padding: 8rpx;
+  display: flex;
+  gap: 8rpx;
+}
+
+.ios-seg__item {
+  flex: 1;
+  text-align: center;
+  padding: 16rpx 0;
+  border-radius: 22rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--ios-subtext);
+}
+
+.ios-seg__item--active {
+  background: #ffffff;
+  box-shadow: var(--ios-shadow-strong);
+  color: var(--ios-text);
+}
+
+.ios-sheet {
+  background: #ffffff;
+  border-top-left-radius: 40rpx;
+  border-top-right-radius: 40rpx;
+  padding: 14rpx 18rpx 24rpx;
+}
+
+.ios-sheet__handle {
+  width: 72rpx;
+  height: 10rpx;
+  border-radius: 999rpx;
+  background: rgba(17, 24, 39, 0.12);
+  margin: 8rpx auto 14rpx;
+}
