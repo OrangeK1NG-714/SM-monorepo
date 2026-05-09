@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+
+# OS files
+.DS_Store
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Build output
+dist/
+
+# Local env files
+*.local
+.env.local
+.env.*.local
+
+# Editor directories and files
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.hbuilderx
+
+# Cache files
+.stylelintcache
+.eslintcache
+
+# Mini-program docs
+docs/.vitepress/dist
+docs/.vitepress/cache
+
+# Server specific
+run/
+coverage/
+.nyc_output/
+typings/
+
+# Lock files (only pnpm-lock.yaml at root is committed)
+package-lock.json
+yarn.lock

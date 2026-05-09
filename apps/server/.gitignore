@@ -1,14 +1,4 @@
-logs/
-npm-debug.log
-yarn-error.log
-node_modules/
-package-lock.json
-yarn.lock
-coverage/
-.idea/
-run/
-.DS_Store
-*.sw*
-*.un~
+# Egg.js generated typings
 typings/
-.nyc_output/
+# Egg.js run directory
+run/

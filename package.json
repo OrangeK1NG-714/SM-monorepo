@@ -1,0 +1,31 @@
+{
+  "name": "sm-doubleassistant-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": ">=18",
+    "pnpm": ">=9"
+  },
+  "scripts": {
+    "preinstall": "npx only-allow pnpm",
+    "dev:mp": "pnpm --filter miniprogram dev:mp",
+    "dev:h5": "pnpm --filter miniprogram dev:h5",
+    "dev:admin": "pnpm --filter admin dev",
+    "dev:server": "pnpm --filter server dev",
+    "build:mp": "pnpm --filter miniprogram build:mp",
+    "build:h5": "pnpm --filter miniprogram build:h5",
+    "build:admin": "pnpm --filter admin build",
+    "lint": "pnpm --filter miniprogram lint",
+    "lint:fix": "pnpm --filter miniprogram lint:fix",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.2.10"
+  },
+  "lint-staged": {
+    "apps/miniprogram/**/*.{js,ts,vue}": "eslint --fix"
+  }
+}
