@@ -41,6 +41,7 @@ router.push("/center")
 const handleLogout=()=>{
   localStorage.removeItem("token")
   store.commit("clearUserInfo")
+  store.commit("changeGetterRouter", false)
   router.push("/login")
 }
 </script>

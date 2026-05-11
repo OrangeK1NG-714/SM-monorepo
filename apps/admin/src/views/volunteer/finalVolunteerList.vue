@@ -40,16 +40,12 @@
                 <el-table-column prop="teacherId" label="教师工号" width="auto" />
                 <el-table-column label="操作" width="auto">
                     <template #default="scope">
-                        <el-button size="small" @click="handleEdit(scope.row)">
-                            编辑
-                        </el-button>
                         <el-popconfirm title="你确定要删除吗" confirm-button-text="确定" cancel-button-text="取消"
                             @confirm="handleDelete(scope.row)">
                             <template #reference>
                                 <el-button size="small" type="danger"> 删除 </el-button>
                             </template>
                         </el-popconfirm>
-
                     </template>
                 </el-table-column>
             </el-table>
@@ -58,34 +54,6 @@
                 @size-change="handleSizeChange" @current-change="handlePageChange" class="pagination-wrapper" />
         </el-card>
 
-        <el-dialog v-model="dialogVisible" title="编辑用户" width="500">
-            <el-form ref="userFormRef" style="max-width: 600px" :model="userForm" :rules="userFormRules"
-                label-width="auto" class="demo-ruleForm" status-icon>
-                <el-form-item label="用户名" prop="username">
-                    <el-input v-model="userForm.username" />
-                </el-form-item>
-                <el-form-item label="密码" prop="password">
-                    <el-input v-model="userForm.password" type="password" />
-                </el-form-item>
-                <el-form-item label="角色" prop="role">
-                    <el-select v-model="userForm.role" placeholder="Select" style="width: 100%">
-                        <el-option v-for="item in options" :key="item.value" :label="item.label" :value="item.value" />
-                    </el-select>
-                </el-form-item>
-                <el-form-item label="个人简介" prop="introduction">
-                    <el-input v-model="userForm.introduction" type="textarea" />
-                </el-form-item>
-            </el-form>
-
-            <template #footer>
-                <div class="dialog-footer">
-                    <el-button @click="dialogVisible = false">取消</el-button>
-                    <el-button type="primary" @click="handleEditConfirm()">
-                        确认
-                    </el-button>
-                </div>
-            </template>
-        </el-dialog>
     </div>
 </template>
 
@@ -125,30 +93,6 @@ const searchForm = reactive({
     activityId: ""
 });
 
-const dialogVisible = ref(false);
-const userFormRef = ref();
-let userForm = reactive({
-    username: "",
-    password: "",
-    role: 2, //1是管理员，2是编辑
-    introduction: "",
-});
-const userFormRules = reactive({
-    username: [{ required: true, message: "请输入名字", trigger: "blur" }],
-    password: [{ required: true, message: "请输入密码", trigger: "blur" }],
-    role: [{ required: true, message: "请选择权限", trigger: "blur" }],
-    introduction: [{ required: true, message: "请输入介绍", trigger: "blur" }],
-});
-const options = [
-    {
-        label: "管理员",
-        value: 1,
-    },
-    {
-        label: "编辑",
-        value: 2,
-    },
-];
 
 const tableData = ref([]);
 const selectedUsers = ref([]);
@@ -241,31 +185,22 @@ watch([currentPage, pageSize], async () => {
     });
 });
 
-//编辑回调
-const handleEdit = async (data) => {
-    const res = await axios.get(`/adminapi/user/list/${data._id}`);
-    Object.assign(userForm, res.data.data[0]);
-    // console.log(userForm);
-    dialogVisible.value = true;
-};
-
-//编辑确认回调
-const handleEditConfirm = () => {
-    userFormRef.value.validate(async (valid) => {
-        if (valid) {
-            //更新后端
-            await axios.put(`/adminapi/user/list/${userForm._id}`, userForm);
-            //dialog隐藏
-            dialogVisible.value = false;
-            //获取table数据
-            getTableData();
-        }
-    });
-};
-
 const handleDelete = async (data) => {
-    // console.log(data);
-    await axios.delete(`/adminapi/user/list/${data._id}`);
+    try {
+        const res = await axios.delete("/api/admin/deleteSelected", {
+            data: {
+                _id: data._id
+            }
+        });
+        if (res.data.code === 200) {
+            ElMessage.success('删除成功');
+        } else {
+            ElMessage.error(res.data.msg || '删除失败');
+        }
+    } catch (error) {
+        console.error('删除失败:', error);
+        ElMessage.error('删除失败，请重试');
+    }
     getTableData();
 };
 

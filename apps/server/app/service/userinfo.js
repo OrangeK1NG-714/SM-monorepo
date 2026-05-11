@@ -4,7 +4,7 @@ const Service = require('egg').Service;
 const crypto = require('crypto')
 class UserinfoService extends Service {
     //注册用户账号
-    async userRegister(username, password, role = 'student', name = '',teacherType='') {
+    async userRegister(username, password, role = 'student', name = '', teacherType = '', allowedMajors) {
         //判断是否已存在用户
         const db = this.ctx.model.Userinfo
         const res = await db.find({ username })
@@ -25,12 +25,16 @@ class UserinfoService extends Service {
                     data: {}
                 });
             } else if (role === 'teacher') {
-                await this.ctx.model.Teacher.create({
+                const teacherData = {
                     name: name || '',
                     teacherId: username,
                     msg: '',
-                    teacherType:teacherType
-                });
+                    teacherType,
+                };
+                if (Array.isArray(allowedMajors) && allowedMajors.length > 0) {
+                    teacherData.allowedMajors = allowedMajors;
+                }
+                await this.ctx.model.Teacher.create(teacherData);
             }
 
             return { msg: 'success', code: 200 }
@@ -64,8 +68,10 @@ class UserinfoService extends Service {
     async getUserDetail(username, role) {
         if (role === 'student') {
             const data = await this.ctx.model.Student.findOne({ studentId: username });
-            // console.log(data.data instanceof Object);
-            const isEmpty = Object.keys(data.data).length
+            if (!data) {
+                return { code: 200, data: null, isEmpty: 0 };
+            }
+            const isEmpty = data.data ? Object.keys(data.data).length : 0;
             return { code: 200, data, isEmpty };
         } else if (role === 'teacher') {
             const data = await this.ctx.model.Teacher.findOne({ teacherId: username });

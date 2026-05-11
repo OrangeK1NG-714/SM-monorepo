@@ -5,8 +5,13 @@ const crypto = require('crypto')
 class AdminService extends Service {
     async addActivity(name, description, startDate, endDate, firstChooseStartDate, firstChooseEndDate, secondChooseStartDate, secondChooseEndDate, thirdChooseStartDate, thirdChooseEndDate, stdChooseStartDate, stdChooseEndDate, firstChooseCount, secondChooseCount, thirdChooseCount, stdChooseCount) {
         const { ctx } = this;
-        const res = await ctx.model.Activity.create({ name, description, startDate, endDate, firstChooseStartDate, firstChooseEndDate, secondChooseStartDate, secondChooseEndDate, thirdChooseStartDate, thirdChooseEndDate, stdChooseStartDate, stdChooseEndDate, firstChooseCount, secondChooseCount, thirdChooseCount, stdChooseCount });
-        return res;
+        try {
+            const res = await ctx.model.Activity.create({ name, description, startDate, endDate, firstChooseStartDate, firstChooseEndDate, secondChooseStartDate, secondChooseEndDate, thirdChooseStartDate, thirdChooseEndDate, stdChooseStartDate, stdChooseEndDate, firstChooseCount, secondChooseCount, thirdChooseCount, stdChooseCount });
+            return { code: 200, msg: '活动创建成功', data: res };
+        } catch (error) {
+            ctx.logger.error('创建活动失败:', error);
+            return { code: 500, msg: '创建活动失败' };
+        }
     }
     async getActivityList() {
         const { ctx } = this;
@@ -40,22 +45,29 @@ class AdminService extends Service {
         if (!res) {
             return { code: 400, msg: '活动不存在' };
         }
-        return res;
+        return { code: 200, msg: '活动更新成功' };
     }
     async deleteActivity(id) {
         const { ctx } = this;
         const res = await ctx.model.Activity.findByIdAndDelete(id);
-        return res;
+        if (!res) {
+            return { code: 404, msg: '活动不存在' };
+        }
+        return { code: 200, msg: '活动删除成功' };
     }
     async addTeacherToActivity(activityId, teacherId = null, studentId = null) {
         const { ctx } = this;
+        try {
+            const data = { activityId };
+            if (teacherId) data.teacherId = teacherId;
+            if (studentId) data.studentId = studentId;
 
-        const data = { activityId };
-        if (teacherId) data.teacherId = teacherId;
-        if (studentId) data.studentId = studentId;
-
-        const res = await ctx.model.UserInActivity.create(data);
-        return res;
+            await ctx.model.UserInActivity.create(data);
+            return { code: 200, msg: '添加成功' };
+        } catch (error) {
+            ctx.logger.error('添加用户到活动失败:', error);
+            return { code: 500, msg: '添加失败' };
+        }
     }
 
     async getUserList() {
@@ -101,13 +113,39 @@ class AdminService extends Service {
         //生成哈希值
         const passwordHash = hash.digest('hex')
         const res = await ctx.model.Userinfo.updateMany({ username: { $in: selectedUsers } }, { password: passwordHash });
-        return res;
+        return { code: 200, msg: `已重置 ${res.modifiedCount} 个用户的密码` };
     }
 
 
 
 
-    //查询某活动的所有用户
+    //删除用户
+    async deleteUser(id) {
+        const { ctx } = this;
+        const user = await ctx.model.Userinfo.findByIdAndDelete(id);
+        if (!user) {
+            return { code: 404, msg: '用户不存在' };
+        }
+        if (user.role === 'student') {
+            await ctx.model.Student.deleteOne({ studentId: user.username });
+        } else if (user.role === 'teacher') {
+            await ctx.model.Teacher.deleteOne({ teacherId: user.username });
+        }
+        return { code: 200, msg: '用户删除成功' };
+    }
+    //更新用户信息
+    async updateUser(id, username, role) {
+        const { ctx } = this;
+        const user = await ctx.model.Userinfo.findById(id);
+        if (!user) {
+            return { code: 404, msg: '用户不存在' };
+        }
+        if (username) user.username = username;
+        if (role) user.role = role;
+        await user.save();
+        return { code: 200, msg: '用户信息更新成功' };
+    }
+
     //查询某活动的所有用户
     async getUserListInActivity(activityId, username, role) {
         const { ctx } = this;
@@ -174,7 +212,10 @@ class AdminService extends Service {
     async deleteUserInActivity(_id) {
         const { ctx } = this;
         const res = await ctx.model.UserInActivity.findByIdAndDelete(_id);
-        return res;
+        if (!res) {
+            return { code: 404, msg: '记录不存在' };
+        }
+        return { code: 200, msg: '删除成功' };
     }
     //查询选择志愿列表
     async getSelectedList(studentId, activityId) {
@@ -194,7 +235,10 @@ class AdminService extends Service {
     async deleteSelected(_id) {
         const { ctx } = this;
         const res = await ctx.model.Choose.findByIdAndDelete(_id);
-        return res;
+        if (!res) {
+            return { code: 404, msg: '志愿记录不存在' };
+        }
+        return { code: 200, msg: '删除成功' };
     }
 
     //查询最终志愿
@@ -261,7 +305,7 @@ class AdminService extends Service {
             activityId: activityId,
             studentId: studentId
         });
-        return res;
+        return { code: 200, msg: `已重置 ${res.deletedCount} 条志愿` };
     }
 
     //配置一个活动中某位老师最大可选学生数
@@ -273,7 +317,23 @@ class AdminService extends Service {
         }, {
             maxSelectNum: maxSelectNum
         });
-        return res;
+        if (res.matchedCount === 0) {
+            return { code: 404, msg: '未找到对应记录' };
+        }
+        return { code: 200, msg: '配置成功' };
+    }
+    //配置老师允许的专业
+    async updateTeacherAllowedMajors(teacherId, allowedMajors) {
+        const { ctx } = this;
+        const teacher = await ctx.model.Teacher.findOneAndUpdate(
+            { teacherId },
+            { allowedMajors },
+            { new: true }
+        );
+        if (!teacher) {
+            return { code: 404, msg: '老师不存在' };
+        }
+        return { code: 200, msg: '专业限制已更新' };
     }
     //查询一个活动中某位老师最大可选学生数
     async getMaxSelectNum(activityId, teacherId) {

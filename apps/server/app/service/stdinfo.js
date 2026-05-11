@@ -4,17 +4,17 @@ const Service = require('egg').Service;
 
 class StdinfoService extends Service {
     //新增学生信息
-    async writeUserMsg(name, gender, studentId, grade, classNum, phone, gpa, direction) {
+    async writeUserMsg(name, gender, studentId, grade, classNum, phone, gpa, direction, major) {
         try {
             let student = await this.ctx.model.Student.findOne({ studentId });
             if (student) {
-                student.data = { name, gender, studentId, grade, classNum, phone, gpa, direction };
+                student.data = { name, gender, studentId, grade, classNum, phone, gpa, direction, major };
                 await student.save();
                 return { code: 200, msg: '学生信息已更新', data: student };
             } else {
                 const newStudent = await this.ctx.model.Student.create({
                     studentId,
-                    data: { name, gender, studentId, grade, classNum, phone, gpa, direction }
+                    data: { name, gender, studentId, grade, classNum, phone, gpa, direction, major }
                 });
                 return { code: 200, msg: '学生信息新增成功', data: newStudent };
             }
@@ -32,6 +32,7 @@ class StdinfoService extends Service {
             await student.save();
             return { code: 200, msg: '学生信息已更新', data: student };
         }
+        return { code: 404, msg: '学生不存在' };
     }
 
     //新增学生选老师选项
@@ -42,9 +43,21 @@ class StdinfoService extends Service {
         }
         const now = new Date(createTime);
         const adjustedTime = new Date(createTime);
-        if (now < Date(activity.stdChooseEndDate) && now > Date(activity.stdChooseStartDate)) {
+        const startDate = new Date(activity.stdChooseStartDate);
+        const endDate = new Date(activity.stdChooseEndDate);
+        if (now < startDate || now > endDate) {
             return { code: 400, msg: '不在选老师时间内' };
         }
+
+        const student = await this.ctx.model.Student.findOne({ studentId });
+        const teacher = await this.ctx.model.Teacher.findOne({ teacherId });
+        if (student && teacher && teacher.allowedMajors && teacher.allowedMajors.length > 0) {
+            const studentMajor = student.data?.major || '普通';
+            if (!teacher.allowedMajors.includes(studentMajor)) {
+                return { code: 400, msg: '该导师不接受您所在专业的学生选择' };
+            }
+        }
+
         const choose = await this.ctx.model.Choose.create({
             studentId,
             teacherId,
@@ -93,25 +106,45 @@ class StdinfoService extends Service {
     async getStudentMsg(studentId) {
         const { ctx } = this;
         const res = await ctx.model.Student.findOne({ studentId });
-        return res;
+        if (!res) {
+            return { code: 404, msg: '学生不存在', data: null };
+        }
+        return { code: 200, msg: 'success', data: res };
     }
 
     //新增学生上传简历
     async uploadResume(fileName, filePath, studentId) {
         const { ctx } = this;
-        let res = await ctx.model.Resume.findOne({ studentId });
-        console.log(res);
-        if (!res) {
-            res = new ctx.model.Resume({
-                studentId: studentId,
-                fileName: fileName,
-                filePath: filePath,
-            });
-            await res.save();
-            return { code: 200, msg: '学生简历已上传', data: res };
-        } else {
-            return { code: 201, msg: '学生简历已存在', data: res };
+        const fs = require('fs');
+        const path = require('path');
+
+        const existing = await ctx.model.Resume.findOne({ studentId });
+        if (existing) {
+            // 删除旧文件
+            if (existing.filePath) {
+                const oldFilePath = path.join(this.config.baseDir, 'app', existing.filePath);
+                try {
+                    if (fs.existsSync(oldFilePath)) {
+                        fs.unlinkSync(oldFilePath);
+                    }
+                } catch (e) {
+                    ctx.logger.warn('[uploadResume] 删除旧文件失败:', e.message);
+                }
+            }
+            existing.fileName = fileName;
+            existing.filePath = filePath;
+            existing.createTime = new Date();
+            await existing.save();
+            return { code: 200, msg: '简历已更新' };
         }
+
+        const resume = new ctx.model.Resume({
+            studentId,
+            fileName,
+            filePath,
+        });
+        await resume.save();
+        return { code: 200, msg: '简历上传成功' };
     }
 }
 

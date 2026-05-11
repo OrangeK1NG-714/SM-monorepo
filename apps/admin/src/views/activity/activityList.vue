@@ -173,6 +173,7 @@
                         </el-popconfirm>
                         <!-- 增加一个form，需要输入老师的最大选择人数 -->
                         <el-button type="primary" @click="handleSetMaxSelect(scope.row)" v-if="scope.row.role === 'teacher'">设置最大选择人数</el-button>
+                        <el-button type="success" @click="handleSetAllowedMajors(scope.row)" v-if="scope.row.role === 'teacher'">设置专业限制</el-button>
                     </template>
 
                 </el-table-column>
@@ -183,6 +184,25 @@
             <template #footer>
                 <div class="dialog-footer">
                     <el-button @click="dialogVisible3 = false">关闭</el-button>
+                </div>
+            </template>
+        </el-dialog>
+
+        <el-dialog title="设置专业限制" v-model="dialogVisible5" width="30vw">
+            <el-form :label-width="120" class="demo-form-inline">
+                <el-form-item label="允许选择的专业">
+                    <el-checkbox-group v-model="currentAllowedMajors">
+                        <el-checkbox label="普通">普通</el-checkbox>
+                        <el-checkbox label="中本">中本</el-checkbox>
+                    </el-checkbox-group>
+                </el-form-item>
+                <el-form-item>
+                    <el-button type="primary" @click="handleUpdateAllowedMajors">更新</el-button>
+                </el-form-item>
+            </el-form>
+            <template #footer>
+                <div class="dialog-footer">
+                    <el-button @click="dialogVisible5 = false">关闭</el-button>
                 </div>
             </template>
         </el-dialog>
@@ -392,12 +412,50 @@ watch([currentPage2, pageSize2], async () => {
 
 
 const dialogVisible4 = ref(false);
+const dialogVisible5 = ref(false);
+const currentAllowedMajors = ref(['普通', '中本']);
+const currentAllowedMajorsTeacherId = ref('');
 const currentEditingRow = ref(null);
 
 // 处理设置最大选择人数
 const handleSetMaxSelect = (row) => {
     currentEditingRow.value = { ...row }; // 创建副本避免直接修改原数据
     dialogVisible4.value = true;
+};
+
+// 设置专业限制
+const handleSetAllowedMajors = async (row) => {
+    currentAllowedMajorsTeacherId.value = row.teacherId;
+    try {
+        const res = await axios.get('/api/teacher/detail');
+        const teacher = res.data.data.find(t => t.teacherId === row.teacherId);
+        if (teacher && teacher.allowedMajors) {
+            currentAllowedMajors.value = [...teacher.allowedMajors];
+        } else {
+            currentAllowedMajors.value = ['普通', '中本'];
+        }
+    } catch (error) {
+        currentAllowedMajors.value = ['普通', '中本'];
+    }
+    dialogVisible5.value = true;
+};
+
+// 更新专业限制
+const handleUpdateAllowedMajors = async () => {
+    if (currentAllowedMajors.value.length === 0) {
+        ElMessage.warning('请至少选择一个专业');
+        return;
+    }
+    try {
+        await axios.put('/api/admin/updateTeacherAllowedMajors', {
+            teacherId: currentAllowedMajorsTeacherId.value,
+            allowedMajors: currentAllowedMajors.value,
+        });
+        ElMessage.success('专业限制更新成功');
+        dialogVisible5.value = false;
+    } catch (error) {
+        ElMessage.error('更新失败，请重试');
+    }
 };
 
 // 更新最大选择人数
@@ -429,17 +487,15 @@ const handleUpdateMaxSelectNum = async () => {
 console.log(currentEditingRow.value.activityId);
 
      try {
-        const res = await axios.get("api/admin/getUserListInActivity", {
+        const res = await axios.get("/api/admin/getUserListInActivity", {
             params: {
                 activityId: currentEditingRow.value.activityId
             }
         });
-        console.log(res.data);
         res.data.map(item => {
             item.username = item.teacherId || item.studentId;
             item.role = item.teacherId ? 'teacher' : item.studentId ? 'student' : 'admin';
         })
-        console.log(res.data);
 
         viewUserList.value = res.data;
 
@@ -539,40 +595,42 @@ const handleEdit = (row) => {
 const saveEdit = () => {
     editFormRef.value.validate(async (valid) => {
         if (valid) {
-            console.log(123);
-            console.log(editForm);
-
-            const res = await axios.put("api/admin/updateActivity", editForm);
-            console.log(res);
-
-            if (res.data.code === 200) {
-                ElMessage.success('修改成功');
-                getTableData();
-                dialogVisible.value = false;
-            }
-            else {
-                ElMessage.error('修改失败');
+            try {
+                const res = await axios.put("/api/admin/updateActivity", editForm);
+                if (res.data.code === 200) {
+                    ElMessage.success('修改成功');
+                    getTableData();
+                    dialogVisible.value = false;
+                }
+                else {
+                    ElMessage.error(res.data.msg || '修改失败');
+                }
+            } catch (error) {
+                console.error('修改活动失败:', error);
+                ElMessage.error('修改失败，请重试');
             }
         }
-
     })
 }
 //删除活动
 const handleDelete = async (row) => {
-    console.log(row);
-    const res = await axios.delete("/api/admin/deleteActivity", {
-        data: {
-            id: row._id
+    try {
+        const res = await axios.delete("/api/admin/deleteActivity", {
+            data: {
+                id: row._id
+            }
+        })
+        if (res.data.code === 200) {
+            ElMessage.success('删除成功');
+            getTableData();
         }
-    })
-    if (res.data.code === 200) {
-        ElMessage.success('删除成功');
-        getTableData();
+        else {
+            ElMessage.error(res.data.msg || '删除失败');
+        }
+    } catch (error) {
+        console.error('删除活动失败:', error);
+        ElMessage.error('删除失败，请重试');
     }
-    else {
-        ElMessage.error('删除失败');
-    }
-
 }
 
 
@@ -582,17 +640,15 @@ const handleViewActivityUsers = async (row) => {
     currentActivityId.value = row._id;
     dialogVisible3.value = true;
     try {
-        const res = await axios.get("api/admin/getUserListInActivity", {
+        const res = await axios.get("/api/admin/getUserListInActivity", {
             params: {
                 activityId: row._id
             }
         });
-        console.log(res.data);
         res.data.map(item => {
             item.username = item.teacherId || item.studentId;
             item.role = item.teacherId ? 'teacher' : item.studentId ? 'student' : 'admin';
         })
-        console.log(res.data);
 
         viewUserList.value = res.data;
 
@@ -645,19 +701,21 @@ const handleViewActivityDetails = (activityId) => {
 
 //确认添加
 const saveAddUser = async () => {
-    // console.log(currentActivityId.value);
-
-    // console.log(selectedUsers.value);
-    Promise.all(selectedUsers.value.map(async item => {
-        const res = await axios.post("api/admin/addTeacherToActivity", {
-            activityId: currentActivityId.value,
-            teacherId: item.role === 'teacher' ? item.username : null,
-            studentId: item.role === 'student' ? item.username : null,
-        });
-        console.log(res);
-    }))
-    ElMessage.success(`添加成功${selectedUsers.value.length}个用户`);
-    dialogVisible2.value = false;
+    try {
+        await Promise.all(selectedUsers.value.map(async item => {
+            await axios.post("/api/admin/addTeacherToActivity", {
+                activityId: currentActivityId.value,
+                teacherId: item.role === 'teacher' ? item.username : null,
+                studentId: item.role === 'student' ? item.username : null,
+            });
+        }))
+        ElMessage.success(`添加成功${selectedUsers.value.length}个用户`);
+        dialogVisible2.value = false;
+        selectedUsers.value = [];
+    } catch (error) {
+        console.error('添加用户失败:', error);
+        ElMessage.error('添加用户失败，请重试');
+    }
 };
 
 //dialog中搜索用户

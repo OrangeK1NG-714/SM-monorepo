@@ -16,6 +16,10 @@ module.exports = app => {
         thirdChooseEndDate: { type: Date, required: true },
         stdChooseStartDate: { type: Date, required: true },
         stdChooseEndDate: { type: Date, required: true },
+        firstChooseCount: { type: Number, default: 0 },
+        secondChooseCount: { type: Number, default: 0 },
+        thirdChooseCount: { type: Number, default: 0 },
+        stdChooseCount: { type: Number, default: 0 },
         subscribeSent: { type: Boolean, default: false },
     }, { versionKey: false });
     return mongoose.model('Activity', ActivitySchema);

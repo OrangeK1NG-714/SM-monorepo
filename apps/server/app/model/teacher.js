@@ -8,6 +8,7 @@ module.exports = app => {
         teacherId: { type: String, default: '' },
         msg: { type: String, default: '' },
         teacherType: { type: String, default: '' },
+        allowedMajors: { type: [String], default: ['普通', '中本'] },
         resumeName: { type: String, default: '' },
         resumePath: { type: String, default: '' }
     }, { versionKey: false });

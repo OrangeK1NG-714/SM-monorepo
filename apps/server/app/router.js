@@ -79,8 +79,10 @@ module.exports = app => {
   //以下是管理端代码
   //查询所有用户
   router.get('/api/admin/getUserList', app.middleware.jwt({ requiredRole: 'admin' }), controller.admin.getUserList)
-  // //删除某个用户
-  // router.delete('/api/admin/deleteUser', app.middleware.jwt({ requiredRole: 'admin' }), controller.admin.deleteUser)
+  //删除某个用户
+  router.delete('/api/admin/deleteUser', app.middleware.jwt({ requiredRole: 'admin' }), controller.admin.deleteUser)
+  //更新用户信息
+  router.put('/api/admin/updateUser', app.middleware.jwt({ requiredRole: 'admin' }), controller.admin.updateUser)
 
   //查询所有活动（已有）
   // router.get('/api/admin/getActivityList', app.middleware.jwt({ requiredRole: 'admin' }), controller.admin.getActivityList)
@@ -109,6 +111,8 @@ module.exports = app => {
 
   //配置一个活动中某位老师最大可选学生数
   router.put('/api/admin/configMaxSelectNum', app.middleware.jwt({ requiredRole: 'admin' }), controller.admin.configMaxSelectNum)
+  //配置老师允许的专业
+  router.put('/api/admin/updateTeacherAllowedMajors', app.middleware.jwt({ requiredRole: 'admin' }), controller.admin.updateTeacherAllowedMajors)
   //查询一个活动中某位老师最大可选学生数
   router.get('/api/user/getMaxSelectNum', app.middleware.jwt(), controller.admin.getMaxSelectNum)
 

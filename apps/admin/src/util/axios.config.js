@@ -35,18 +35,10 @@ axios.interceptors.response.use(
         return response;
     },
     function (error) {
-        console.log(error);
-        
-        // 对响应错误做些什么
-        // console.log('响应拦截器 - 响应错误', error);
-        // 例如：处理 HTTP 错误状态码
-        // const {status} =error.response
-        // if (status === 401) {
-        //     localStorage.removeItem("token")
-        //     window.location.href="#/login"
-        // }
-        console.log("测试");
-        
+        if (error.response && error.response.status === 401) {
+            localStorage.removeItem("token")
+            window.location.href = "#/login"
+        }
         return Promise.reject(error);
     }
 );

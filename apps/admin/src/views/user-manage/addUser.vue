@@ -33,6 +33,12 @@
             <el-option v-for="item in teacherTypeOptions" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
+          <el-form-item label="允许选择的专业">
+            <el-checkbox-group v-model="userForm.allowedMajors">
+              <el-checkbox label="普通">普通</el-checkbox>
+              <el-checkbox label="中本">中本</el-checkbox>
+            </el-checkbox-group>
+          </el-form-item>
         </template>
 
 
@@ -143,8 +149,9 @@ const userFormRef = ref();
 const userForm = reactive({
   username: "",
   password: "",
-  role: '', //admin是管理员，teacher是老师，student是学生
+  role: '',
   name: '',
+  allowedMajors: ['普通', '中本'],
 });
 const userBatchForm = reactive({
   users: [],

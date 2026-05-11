@@ -1,9 +1,5 @@
 import type { CustomRequestOptions } from '@/interceptors/request'
-
-// 本地127.0.0.1:7001
-// 服务器47.118.26.28:7001
-// const localhost = 'http://localhost:7001'
-const localhost = 'https://richardq.tech'
+import { API_BASE_URL } from '@/config'
 /**
  * 刷新token返回结果
  */
@@ -110,7 +106,7 @@ async function doRefreshToken(): Promise<string | null> {
 
   try {
     const res = await uni.request({
-      url: `${localhost}/api/user/refresh`,
+      url: `${API_BASE_URL}/api/user/refresh`,
       method: 'POST',
       data: { refreshToken },
       dataType: 'json',
@@ -207,7 +203,13 @@ export function http<T>(options: CustomRequestOptions) {
         // 没有refreshToken，说明未登录
         if (isInvalidTokenStr(refreshTokenValue)) {
           console.log('[http] no refreshToken, redirect to login')
-          uni.redirectTo({ url: '/pages/login/login' })
+          if (!isRedirectingToLogin) {
+            isRedirectingToLogin = true
+            uni.redirectTo({
+              url: '/pages/login/login',
+              complete: () => { isRedirectingToLogin = false },
+            })
+          }
           reject(new Error('未登录，请先登录'))
           return
         }
@@ -242,7 +244,13 @@ export function http<T>(options: CustomRequestOptions) {
                 request.reject(new Error('登录已过期，请重新登录'))
               })
               requestQueue = []
-              uni.redirectTo({ url: '/pages/login/login' })
+              if (!isRedirectingToLogin) {
+                isRedirectingToLogin = true
+                uni.redirectTo({
+                  url: '/pages/login/login',
+                  complete: () => { isRedirectingToLogin = false },
+                })
+              }
               reject(new Error('登录已过期，请重新登录'))
             }
           })
@@ -252,7 +260,13 @@ export function http<T>(options: CustomRequestOptions) {
               request.reject(error)
             })
             requestQueue = []
-            uni.redirectTo({ url: '/pages/login/login' })
+            if (!isRedirectingToLogin) {
+              isRedirectingToLogin = true
+              uni.redirectTo({
+                url: '/pages/login/login',
+                complete: () => { isRedirectingToLogin = false },
+              })
+            }
             reject(error)
           })
         return

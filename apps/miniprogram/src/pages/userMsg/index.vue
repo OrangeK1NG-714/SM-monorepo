@@ -8,7 +8,8 @@
 </route>
 
 <script lang="ts" setup>
-import { writeStdInfo } from '@/api/stdInfo'
+import { getStudentMsg, writeStdInfo } from '@/api/stdInfo'
+import { API_BASE_URL } from '@/config'
 import { useUserStore } from '@/store/user'
 
 // 定义表单数据类型
@@ -18,6 +19,7 @@ interface StudentForm {
   studentId: string
   grade: string
   classNum: string
+  major: string
   phone: string
   gpa: string
   direction: string
@@ -51,6 +53,7 @@ safeAreaInsets = systemInfo.safeAreaInsets
 // #endif
 
 const genderArray = ['男', '女']
+const majorArray = ['普通', '中本']
 const directionArray = [
   '前端开发',
   '后端开发',
@@ -71,25 +74,60 @@ const formData = ref<StudentForm>({
   studentId: '',
   grade: '',
   classNum: '',
+  major: '',
   phone: '',
   gpa: '',
   direction: '',
   resumeName: '',
 })
 
+const isEditMode = ref(false)
 const showAgreement = ref(false)
 const focusedField = ref<string | null>(null)
 const submitting = ref(false)
 
+onLoad(async (query) => {
+  if (query?.mode === 'edit') {
+    isEditMode.value = true
+    uni.showLoading({ title: '加载中...' })
+    try {
+      const res: any = await getStudentMsg(useUserStore().userInfo.username)
+      if (res?.data) {
+        const d = res.data
+        formData.value = {
+          name: d.name || '',
+          gender: d.gender || '',
+          studentId: d.studentId || '',
+          grade: d.grade || '',
+          classNum: d.classNum || '',
+          major: d.major || '',
+          phone: d.phone || '',
+          gpa: d.gpa || '',
+          direction: d.direction || '',
+          resumeName: '',
+        }
+      }
+    }
+    catch (error) {
+      console.error('获取信息失败:', error)
+      uni.showToast({ title: '获取信息失败', icon: 'none' })
+    }
+    finally {
+      uni.hideLoading()
+    }
+  }
+})
+
 function uploadResume() {
   // 上传简历逻辑
   console.log('上传简历')
-  uni.chooseImage({
+  // #ifdef MP-WEIXIN
+  uni.chooseMessageFile({
     count: 1,
     type: 'file',
     extension: ['pdf'],
     success(res) {
-      const tempFilePath = res.tempFilePaths[0]
+      const tempFilePath = res.tempFiles[0].path
       const studentId = useUserStore().userInfo.username
       const fileName = res.tempFiles[0].name
       // 字段验证
@@ -112,14 +150,17 @@ function uploadResume() {
       console.log('上传参数:', { fileName, studentId, filePath: tempFilePath })
 
       uni.showLoading({ title: '上传中...' })
+      const accessToken = uni.getStorageSync('accessToken')
       uni.uploadFile({
-        url: 'https://richardq.tech/api/student/uploadResume',
+        url: `${API_BASE_URL}/api/student/uploadResume`,
         filePath: tempFilePath,
         name: 'file',
+        header: {
+          Authorization: accessToken ? `Bearer ${accessToken}` : '',
+        },
         formData: {
           fileName,
           studentId,
-          filePath: tempFilePath,
         },
         success(res) {
           if (res.statusCode === 200) {
@@ -139,6 +180,51 @@ function uploadResume() {
       })
     },
   })
+  // #endif
+  // #ifndef MP-WEIXIN
+  uni.chooseFile({
+    count: 1,
+    type: 'file',
+    extension: ['pdf'],
+    success(res) {
+      const tempFilePath = res.tempFilePaths[0]
+      const studentId = useUserStore().userInfo.username
+      const fileName = res.tempFiles[0].name || 'resume.pdf'
+
+      if (!studentId || !tempFilePath) {
+        uni.showToast({ title: '参数获取失败', icon: 'error' })
+        return
+      }
+
+      uni.showLoading({ title: '上传中...' })
+      const accessToken = uni.getStorageSync('accessToken')
+      uni.uploadFile({
+        url: `${API_BASE_URL}/api/student/uploadResume`,
+        filePath: tempFilePath,
+        name: 'file',
+        header: {
+          Authorization: accessToken ? `Bearer ${accessToken}` : '',
+        },
+        formData: { fileName, studentId },
+        success(uploadRes) {
+          if (uploadRes.statusCode === 200) {
+            uni.showToast({ title: '上传成功', icon: 'success' })
+            formData.value.resumeName = fileName
+          }
+          else {
+            uni.showToast({ title: '上传失败，请重试', icon: 'none' })
+          }
+        },
+        fail() {
+          uni.showToast({ title: '上传失败，请检查网络', icon: 'none' })
+        },
+        complete() {
+          uni.hideLoading()
+        },
+      })
+    },
+  })
+  // #endif
 }
 
 function submitForm() {
@@ -159,6 +245,7 @@ function validateForm(): boolean {
     'studentId',
     'grade',
     'classNum',
+    'major',
     'phone',
     'direction',
   ]
@@ -211,6 +298,7 @@ function getFieldName(field: keyof StudentForm): string {
     studentId: '学号',
     grade: '年级',
     classNum: '班级',
+    major: '专业类型',
     phone: '联系电话',
     gpa: '绩点',
     direction: '意向方向',
@@ -222,6 +310,10 @@ function getFieldName(field: keyof StudentForm): string {
 // 选择性别
 function bindGenderChange(e: any) {
   formData.value.gender = genderArray[e.detail.value]
+}
+
+function bindMajorChange(e: any) {
+  formData.value.major = majorArray[e.detail.value]
 }
 
 function bindClassInput(e) {
@@ -260,8 +352,13 @@ async function handleAgree() {
 
   try {
     await writeStdInfo(formData.value)
-    uni.showToast({ title: '提交成功', icon: 'success' })
-    uni.redirectTo({ url: '/pages/index/index' })
+    uni.showToast({ title: isEditMode.value ? '修改成功' : '提交成功', icon: 'success' })
+    if (isEditMode.value) {
+      setTimeout(() => uni.navigateBack(), 1000)
+    }
+    else {
+      uni.redirectTo({ url: '/pages/index/index' })
+    }
   }
   catch (error) {
     console.error('提交失败:', error)
@@ -281,10 +378,10 @@ async function handleAgree() {
   >
     <view class="px-5 pt-6">
       <view class="ios-title">
-        学生基本信息
+        {{ isEditMode ? '修改个人信息' : '学生基本信息' }}
       </view>
       <view class="ios-subtitle mt-2">
-        请如实填写，信息将用于互选流程。
+        {{ isEditMode ? '修改后点击保存即可生效。' : '请如实填写，信息将用于互选流程。' }}
       </view>
     </view>
 
@@ -344,6 +441,8 @@ async function handleAgree() {
               class="ios-input"
               type="number"
               placeholder="请输入学号"
+              :disabled="isEditMode"
+              :style="isEditMode ? { color: '#9CA3AF' } : {}"
               @focus="focusedField = 'studentId'"
               @blur="focusedField = null"
             >
@@ -383,6 +482,26 @@ async function handleAgree() {
               @focus="focusedField = 'classNum'"
               @blur="focusedField = null"
             >
+          </view>
+        </view>
+        <view class="ios-divider" style="margin-left: 28rpx" />
+        <view class="ios-cell">
+          <view class="ios-cell__label">
+            专业类型
+          </view>
+          <view class="ios-cell__content">
+            <picker
+              mode="selector"
+              :range="majorArray"
+              @change="bindMajorChange"
+            >
+              <view
+                class="text-[28rpx]"
+                :class="formData.major ? 'text-[#111827]' : 'text-[#9CA3AF]'"
+              >
+                {{ formData.major || "请选择" }}
+              </view>
+            </picker>
           </view>
         </view>
         <view class="ios-divider" style="margin-left: 28rpx" />
@@ -472,7 +591,7 @@ async function handleAgree() {
 
       <view class="mt-10">
         <button class="ios-btn ios-btn--primary w-full" @tap="submitForm">
-          提交信息
+          {{ isEditMode ? '保存修改' : '提交信息' }}
         </button>
       </view>
     </view>

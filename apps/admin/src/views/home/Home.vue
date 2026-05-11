@@ -27,7 +27,7 @@ console.log(store.state);
 const loopList = ref([]);
 const avatarUrl = computed(() =>
   store.state.userInfo.avatar
-    ? "http://localhost:3000" + store.state.userInfo.avatar
+    ? store.state.userInfo.avatar
     : `https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png`
 );
 const welcomeText = computed(() =>

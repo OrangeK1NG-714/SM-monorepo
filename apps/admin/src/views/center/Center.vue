@@ -10,7 +10,7 @@
         <el-card class="box-card">
           <el-avatar :size="80" :src="avatarUrl" />
           <h3>{{ store.state.userInfo.username }}</h3>
-          <h5>{{ store.state.userInfo.role === 1 ? "管理员" : "编辑" }}</h5>
+          <h5>{{ store.state.userInfo.role === 'admin' ? '管理员' : store.state.userInfo.role === 'teacher' ? '老师' : '学生' }}</h5>
         </el-card>
       </el-col>
       <el-col :span="16">
@@ -72,7 +72,7 @@ import { ElMessage } from "element-plus";
 const store = useStore();
 const avatarUrl = computed(() =>
   store.state.userInfo.avatar
-    ? "http://localhost:3000" + store.state.userInfo.avatar
+    ? store.state.userInfo.avatar
     : `https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png`
 );
 const { username, gender, introduction, avatar } = store.state.userInfo;

@@ -50,30 +50,26 @@ function formatDateRange(start: string, end: string) {
 // 分类活动函数
 function classifyActivities(activities: Array<any>) {
   const now = nowDate.value
+  ongoingList.value = []
+  endedList.value = []
 
   activities.forEach((activity) => {
     const startDate = new Date(activity.startDate)
     const endDate = new Date(activity.endDate)
+    const item = {
+      id: activity._id,
+      name: activity.name,
+      description: activity.description,
+      startDate: activity.startDate,
+      endDate: activity.endDate,
+    }
 
-    if (now >= startDate && now <= endDate) {
-      // 进行中的活动
-      ongoingList.value.push({
-        id: activity._id,
-        name: activity.name,
-        description: activity.description,
-        startDate: activity.startDate,
-        endDate: activity.endDate,
-      })
+    if (now > endDate) {
+      endedList.value.push(item)
     }
     else {
-      // 已结束的活动
-      endedList.value.push({
-        id: activity._id,
-        name: activity.name,
-        description: activity.description,
-        startDate: activity.startDate,
-        endDate: activity.endDate,
-      })
+      // 进行中或即将开始的活动都归入进行中
+      ongoingList.value.push(item)
     }
   })
 }
@@ -113,6 +109,12 @@ function openMyVolunteer() {
 function openMyStudent() {
   uni.navigateTo({
     url: '/pages/myStudent/index',
+  })
+}
+
+function goEditProfile() {
+  uni.navigateTo({
+    url: '/pages/userMsg/index?mode=edit',
   })
 }
 
@@ -178,22 +180,15 @@ onLoad(async () => {
   try {
     const res: any = await getActivityList()
 
-    if (useStore.userInfo?.role === 'student') {
-      const promises = res.map(async (item) => {
-        return await isStudentInActivity(item._id, useStore.userInfo?.username)
-      })
-      const results = await Promise.all(promises)
-      const userActivities = res.filter((_item, index) => results[index].code === 200)
-      classifyActivities(userActivities as any)
-    }
-    else {
-      const promises = res.map(async (item) => {
-        return await isTeacherInActivity(item._id, useStore.userInfo?.username)
-      })
-      const results = await Promise.all(promises)
-      const userActivities = res.filter((_item, index) => results[index].code === 200)
-      classifyActivities(userActivities as any)
-    }
+    const checkFn = useStore.userInfo?.role === 'student' ? isStudentInActivity : isTeacherInActivity
+    const results = await Promise.allSettled(
+      res.map((item: any) => checkFn(item._id, useStore.userInfo?.username)),
+    )
+    const userActivities = res.filter((_item: any, index: number) => {
+      const result = results[index]
+      return result.status === 'fulfilled' && result.value?.code === 200
+    })
+    classifyActivities(userActivities as any)
 
     const userDetail: any = await getUserDetail(useStore.userInfo?.username, useStore.userInfo?.role)
     role.value = useStore.userInfo?.role
@@ -218,11 +213,22 @@ onLoad(async () => {
   <view class="ios-page" :style="{ paddingTop: `${safeAreaInsets?.top || 0}px` }">
     <view class="px-5 pt-6">
       <template v-if="role === 'student'">
-        <view class="ios-title">
-          你好，{{ name }}
-        </view>
-        <view class="ios-subtitle mt-2">
-          请选择活动后进入系统，开始选择导师。
+        <view class="ios-header-row">
+          <view>
+            <view class="ios-title">
+              你好，{{ name }}
+            </view>
+            <view class="ios-subtitle mt-2">
+              请选择活动后进入系统，开始选择导师。
+            </view>
+          </view>
+          <view class="ios-edit-btn" @tap="goEditProfile">
+            <view class="ios-edit-icon">
+              <text style="font-size:32rpx;">
+                &#9998;
+              </text>
+            </view>
+          </view>
         </view>
       </template>
       <template v-else-if="role === 'teacher'">
@@ -562,5 +568,28 @@ onLoad(async () => {
   width: 100%;
   padding: 16rpx 14rpx;
   font-size: 24rpx;
+}
+.ios-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.ios-edit-btn {
+  flex-shrink: 0;
+  margin-left: 16rpx;
+  margin-top: 4rpx;
+}
+.ios-edit-icon {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+  background: rgba(10, 132, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0a84ff;
+}
+.ios-edit-icon:active {
+  background: rgba(10, 132, 255, 0.2);
 }
 </style>

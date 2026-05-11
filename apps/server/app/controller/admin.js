@@ -65,6 +65,20 @@ class AdminController extends Controller {
         ctx.send([], res.code, res.msg)
     }
 
+    //删除用户
+    async deleteUser() {
+        const { ctx, service } = this;
+        const { id } = ctx.request.body;
+        const res = await service.admin.deleteUser(id);
+        ctx.send([], res.code, res.msg);
+    }
+    //更新用户信息
+    async updateUser() {
+        const { ctx, service } = this;
+        const { id, username, role } = ctx.request.body;
+        const res = await service.admin.updateUser(id, username, role);
+        ctx.send([], res.code, res.msg);
+    }
     //查询用户信息
     async getUserInfo() {
         const { ctx, service } = this;
@@ -151,6 +165,17 @@ class AdminController extends Controller {
         const { ctx, service } = this;
         const { activityId, teacherId, maxSelectNum } = ctx.request.body;
         const res = await service.admin.configMaxSelectNum(activityId, teacherId, maxSelectNum);
+        ctx.send([], res.code, res.msg);
+    }
+    //配置老师允许的专业
+    async updateTeacherAllowedMajors() {
+        const { ctx, service } = this;
+        const { teacherId, allowedMajors } = ctx.request.body;
+        if (!teacherId || !Array.isArray(allowedMajors)) {
+            ctx.send([], 400, '参数不正确');
+            return;
+        }
+        const res = await service.admin.updateTeacherAllowedMajors(teacherId, allowedMajors);
         ctx.send([], res.code, res.msg);
     }
     //查询一个活动中某位老师最大可选学生数

@@ -304,6 +304,201 @@ pnpm --filter admin <script>        # 操作管理后台
 pnpm --filter server <script>       # 操作后端
 ```
 
+## 修改简历上传
+
+修复学生简历上传功能的 3 个 Bug，并统一环境配置管理。
+
+### Bug 修复
+
+1. **服务端未保存上传文件**：控制器从 `ctx.request.body.filePath` 读取的是客户端临时路径，实际文件在 `ctx.request.files[0]` 但没有被读取保存 → 已修复，文件正确保存到 `app/public/uploads/`
+2. **学生简历不能更新**：已有简历时返回"简历已存在"而非覆盖 → 已修复，支持删除旧文件后更新
+3. **管理后台老师简历上传 accept 包含 PDF 但 beforeUpload 拦截 PDF**：老师简历用 `<img>` 展示，不支持 PDF → `accept` 属性去掉 `.pdf`，与验证逻辑一致
+
+### 环境配置统一
+
+将 7 个文件中分散的 `const localhost = 'https://richardq.tech'` 提取到统一配置文件，切换环境只改一处。
+
+**切换方式**：修改 `apps/miniprogram/src/config/index.ts`
+
+```ts
+// 本地开发
+export const API_BASE_URL = 'http://localhost:7001'
+// 生产部署
+export const API_BASE_URL = 'https://richardq.tech'
+```
+
+管理后台头像 URL 从 `http://localhost:3000`（端口不对）改为相对路径，本地和生产都通过代理/Nginx 访问。
+
+服务端 `config.default.js` 中 MongoDB、JWT Secret、CORS 三处加了"部署时需修改"注释。
+
+### 涉及文件
+
+| 层级 | 文件 | 改动 |
+|------|------|------|
+| Server | `app/controller/stdinfo.js` | 重写 `uploadResume`：从 `ctx.request.files` 读取文件并保存到磁盘 |
+| Server | `app/service/stdinfo.js` | `uploadResume` 支持更新已有简历，删除旧文件 |
+| Server | `config/config.default.js` | MongoDB / JWT / CORS 加部署注释 |
+| Admin | `views/user-manage/userList.vue` | `accept` 去掉 `.pdf` |
+| Admin | `components/upload/Upload.vue` | 头像 URL 去掉 `localhost:3000` 前缀 |
+| Admin | `views/home/Home.vue` | 同上 |
+| Admin | `views/center/Center.vue` | 同上 |
+| 小程序 | `config/index.ts`（新建） | 统一 `API_BASE_URL` 常量 |
+| 小程序 | `api/login.ts` | 引入 `API_BASE_URL` 替换硬编码 |
+| 小程序 | `api/useraction.ts` | 同上 |
+| 小程序 | `api/stdInfo.ts` | 同上 |
+| 小程序 | `api/teaInfo.ts` | 同上 |
+| 小程序 | `utils/http.ts` | 同上 |
+| 小程序 | `pages/s_choose/index.vue` | 同上 |
+| 小程序 | `pages/userMsg/index.vue` | 上传 URL 改为使用 `API_BASE_URL` |
+
+## 修改中本位
+
+实现"某位老师只允许被某专业（普通/中本）的学生选择"功能，同时修复已有 Bug。
+
+### 新增功能
+
+- **学生注册时选择专业类型**：学生填写信息表单新增"专业类型"必填项（普通 / 中本），存入 `student.data.major`
+- **管理员配置老师专业限制**：
+  - 添加老师时可勾选"允许选择的专业"（默认全选）
+  - 活动用户管理中，老师行新增"设置专业限制"按钮，可随时修改
+- **小程序按专业过滤老师**：学生进入选择页面时，只显示允许其专业选择的导师
+- **服务端校验**：`selectTeacher` 接口增加专业匹配校验，防止绕过前端直接调接口
+
+### Bug 修复
+
+- **`selectTeacher` 时间校验**：`Date()` 未使用 `new` 导致返回字符串而非 Date 对象，且判断条件逻辑反转 → 已修正
+- **移除死代码**：`s_choose/index.vue` 中 `isEight` 变量（学号倒数第5位判断中本）声明后从未使用 → 已移除，改为通过学生信息表中的 `major` 字段判断
+
+### 兜底处理
+
+- 已上线的老学生没有 `major` 字段 → 默认按"普通"处理
+- 已上线的老老师没有 `allowedMajors` 字段 → 不过滤，对所有学生可见
+- 前端和服务端双重兜底
+
+### 涉及文件
+
+| 层级 | 文件 | 改动 |
+|------|------|------|
+| Server | `app/model/teacher.js` | 新增 `allowedMajors` 字段 |
+| Server | `app/service/stdinfo.js` | `writeUserMsg` 增加 `major`；修复时间 Bug；新增专业校验 |
+| Server | `app/controller/stdinfo.js` | 提取 `major` 参数 |
+| Server | `app/controller/userinfo.js` | 提取 `allowedMajors` 参数 |
+| Server | `app/service/userinfo.js` | 注册时写入 `allowedMajors` |
+| Server | `app/router.js` | 新增 `PUT /api/admin/updateTeacherAllowedMajors` |
+| Server | `app/controller/admin.js` | 新增 `updateTeacherAllowedMajors` |
+| Server | `app/service/admin.js` | 新增 `updateTeacherAllowedMajors` |
+| Admin | `views/user-manage/addUser.vue` | 添加老师时增加专业限制复选框 |
+| Admin | `views/activity/activityList.vue` | 活动用户管理增加"设置专业限制"按钮和弹窗 |
+| 小程序 | `pages/userMsg/index.vue` | 表单增加"专业类型"选择 |
+| 小程序 | `pages/s_choose/index.vue` | 移除 `isEight` 死代码；按专业过滤老师列表 |
+| 小程序 | `api/stdInfo.ts` | 接口类型定义增加 `major` |
+
+### 新增 API
+
+| 方法 | 路径 | 说明 | 权限 |
+|------|------|------|------|
+| PUT | `/api/admin/updateTeacherAllowedMajors` | 配置老师允许的专业 | 管理员 |
+
+## 增加小程序端修改个人信息
+
+学生首次登录后填写的个人信息原先无法修改，现在在小程序首页右上角增加编辑入口，学生可以随时修改已提交的个人信息。
+
+### 改动说明
+
+- **首页增加编辑按钮**：学生视角的首页右上角新增蓝色圆形编辑图标，点击进入修改个人信息页面
+- **信息表单支持编辑模式**：`userMsg` 页面通过 `?mode=edit` 参数区分新建/编辑模式，编辑模式下自动加载已有信息并回填表单，学号字段不可修改
+- **提交后返回首页**：编辑模式提交成功后返回上一页，新建模式仍跳转首页
+
+### 涉及文件
+
+| 层级 | 文件 | 改动 |
+|------|------|------|
+| 小程序 | `pages/index/index.vue` | 新增编辑按钮、`goEditProfile()` 方法及相关样式 |
+| 小程序 | `pages/userMsg/index.vue` | 支持编辑模式：`onLoad` 获取已有数据回填表单，标题/按钮文字动态切换，学号禁止修改 |
+
+## 交互 Bug 与兜底报错修复
+
+全面修复服务端返回值不统一、空指针崩溃、前端 API 路径错误、缺少错误处理等问题，涉及约 20 个文件。
+
+### 服务端：返回值统一 & 空值兜底
+
+- **`service/admin.js`**：所有方法统一返回 `{ code, msg }` 格式，包裹 try-catch；新增 `deleteUser(id)` 和 `updateUser(id, username, role)` 方法
+- **`service/stdinfo.js`**：`updateUserMsg` 增加学生不存在的 else 分支；`getStudentMsg` 返回 `{ code, msg, data }` 格式
+- **`service/userinfo.js`**：`getUserDetail` 增加 data 为 null 时的兜底返回
+- **`controller/admin.js`**：新增 `deleteUser`、`updateUser` 控制器方法
+- **`controller/stdinfo.js`**：`getStudentMsg` 适配新的 service 返回格式
+- **`model/activity.js`**：补充 `firstChooseCount`、`secondChooseCount`、`thirdChooseCount`、`stdChooseCount` 四个 Number 字段
+- **`router.js`**：取消注释 `deleteUser` 路由；新增 `PUT /api/admin/updateUser` 路由
+
+### 小程序：API 层 & 页面交互修复
+
+- **`api/useraction.ts`**：移除 `import axios`，`getTeacherResume` 改用项目封装的 `http` 方法
+- **`api/login.ts`**：6 个接口补全 `${API_BASE_URL}/api` 前缀；`getWxCode` fail 回调修复 `new Error(err)` → `new Error(err.errMsg || 'wx login failed')`
+- **`pages/s_choose/index.vue`**：
+  - `duplicates` 类型从 `ref()` 改为 `ref<number[]>([])`
+  - v-for key 从 `:key="item.id"` 改为 `:key="item._id || item.teacherId"`（4 处）
+  - `toggleSelect` 后同步更新 `currentTeacher` 引用
+  - 取消选择时使用 filter 替代 splice 避免索引错乱
+- **`pages/index/index.vue`**：
+  - 活动分类：未来活动归入"进行中"列表
+  - `Promise.all` → `Promise.allSettled`，防止单个接口失败导致全部失败
+- **`pages/userMsg/index.vue`**：
+  - 简历上传从 `uni.chooseImage` 改为 `uni.chooseMessageFile`（微信端）/ `uni.chooseFile`（其他端）
+  - 上传请求 header 添加 Authorization token
+- **`utils/http.ts`**：3 处 `uni.redirectTo` 添加 `isRedirectingToLogin` 守卫，防止多个 401 触发多次重定向
+
+### 管理后台：路径修复 & 功能补全
+
+- **`util/axios.config.js`**：恢复 401 响应拦截，自动清除 token 并跳转登录页
+- **`views/activity/activityList.vue`**：
+  - `saveAddUser` 补 `await` + try-catch
+  - 4 处 API 路径补前导 `/`（`"api/admin/..."` → `"/api/admin/..."`）
+  - `saveEdit`、`handleDelete` 包裹 try-catch + ElMessage.error
+- **`views/user-manage/userList.vue`**：
+  - `handleEdit` 从空实现改为回填表单数据并打开弹窗
+  - `handleEditConfirm` 路径从 `/adminapi/user/list/` 改为 `/api/admin/updateUser`
+  - `handleDelete` 路径从 `/adminapi/user/list/` 改为 `/api/admin/deleteUser`，添加 try-catch
+  - `handleSelectAll` 全选去重：`[...new Set()]`（对象无效）→ 基于 `_id` 的 Map 去重
+  - 角色 `options` 从数字值 (1, 2) 改为字符串值 ('admin', 'teacher', 'student')
+- **`views/volunteer/selectVolunteerList.vue`**：移除编辑按钮和编辑弹窗及相关代码；`handleDelete` 添加 try-catch
+- **`views/volunteer/finalVolunteerList.vue`**：移除编辑按钮和编辑弹窗及相关代码；`handleDelete` 路径从 `/adminapi/user/list/` 改为 `/api/admin/deleteSelected`，添加 try-catch
+- **`util/formatTime.js`**：`moment()` → `moment(date)`，修复忽略传入参数的 Bug
+- **`components/mainbox/TopHeader.vue`**：退出登录时增加 `store.commit("changeGetterRouter", false)`，重置动态路由状态
+- **`views/center/Center.vue`**：角色显示从 `role === 1 ? "管理员" : "编辑"` 改为字符串角色匹配（admin/teacher/student）
+
+### 涉及文件
+
+| 模块 | 文件 | 改动 |
+|------|------|------|
+| Server | `service/admin.js` | 返回值统一 + 新增 deleteUser/updateUser |
+| Server | `service/stdinfo.js` | 空值兜底 |
+| Server | `service/userinfo.js` | 空值兜底 |
+| Server | `controller/admin.js` | 新增 deleteUser/updateUser |
+| Server | `controller/stdinfo.js` | 适配新返回格式 |
+| Server | `model/activity.js` | 补 4 个 Number 字段 |
+| Server | `router.js` | 取消注释 + 新增路由 |
+| 小程序 | `api/useraction.ts` | 移除 axios |
+| 小程序 | `api/login.ts` | URL 统一 + 错误处理 |
+| 小程序 | `pages/s_choose/index.vue` | duplicates/key/state/priority |
+| 小程序 | `pages/index/index.vue` | 分类 + allSettled |
+| 小程序 | `pages/userMsg/index.vue` | PDF 上传修复 |
+| 小程序 | `utils/http.ts` | 重定向守卫 |
+| Admin | `util/axios.config.js` | 401 处理 |
+| Admin | `views/activity/activityList.vue` | await + 路径 + try-catch |
+| Admin | `views/user-manage/userList.vue` | 编辑/删除/去重/角色 |
+| Admin | `views/volunteer/selectVolunteerList.vue` | 移除编辑 |
+| Admin | `views/volunteer/finalVolunteerList.vue` | 移除编辑 + 删除路径 |
+| Admin | `util/formatTime.js` | 修复 getTime |
+| Admin | `components/mainbox/TopHeader.vue` | logout 重置路由 |
+| Admin | `views/center/Center.vue` | 角色显示修复 |
+
+### 新增 API
+
+| 方法 | 路径 | 说明 | 权限 |
+|------|------|------|------|
+| DELETE | `/api/admin/deleteUser` | 删除用户（同时清除关联的学生/教师记录）| 管理员 |
+| PUT | `/api/admin/updateUser` | 修改用户信息（用户名、角色）| 管理员 |
+
 ## License
 
 MIT

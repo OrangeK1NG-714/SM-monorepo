@@ -54,7 +54,7 @@ module.exports = appInfo => {
 
     }
   }
-  //连接数据库
+  // 部署时需修改：加认证 mongodb://用户名:密码@127.0.0.1:27017/ms-da-projects
   config.mongoose = {
     url: 'mongodb://127.0.0.1/ms-da-projects',
   }
@@ -75,12 +75,12 @@ module.exports = appInfo => {
     subscribeTemplateId: 'eLfrwx8SgoCSv3vXzAQNUhdCXr69xg5mhMio_xFHd3U',
   }
 
-  //配置JWT
+  // 部署时需修改：换一个更复杂的随机字符串
   config.jwt = {
     secret: 'Linchao0714',
     expiresIn: 60 * 60 * 24 * 3
   }
-  //跨域
+  // 部署时需修改：origin 改为实际域名如 'https://richardq.tech'
   config.cors = {
     origin:'*',
     allowMethods:'GET,HEAD,PUT,POST,DELETE,PATCH',

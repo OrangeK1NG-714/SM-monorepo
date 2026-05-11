@@ -11,19 +11,18 @@
 <script lang="ts" setup>
 import { onLoad } from '@dcloudio/uni-app'
 // import { ref } from 'vue'
-import { getTeacherListInActivity, selectTeacher } from '@/api/stdInfo'
+import { getStudentMsg, getTeacherListInActivity, selectTeacher } from '@/api/stdInfo'
 import { getMaxSelectNum, getTeacherList } from '@/api/teaInfo'
 import {
   getActivityDetail,
   getChooseCount,
   getChooseCountWithActivityId,
 } from '@/api/useraction'
+import { API_BASE_URL } from '@/config'
+
 import { useUserStore } from '@/store/user'
 
 const store = useUserStore()
-
-// const localhost = 'http://localhost:7001'
-const localhost = 'https://richardq.tech'
 
 const IOS_BLUE = '#0A84FF'
 const SUBSCRIBE_TEMPLATE_ID = 'eLfrwx8SgoCSv3vXzAQNUhdCXr69xg5mhMio_xFHd3U'
@@ -48,10 +47,9 @@ const priorityOptions = ref([
   { label: '第三志愿', value: 3 },
 ])
 
-// 中本判断位
-const isEight = ref<boolean>(false)
+const studentMajor = ref<string>('普通')
 // 志愿是否重复判断
-const duplicates = ref()
+const duplicates = ref<number[]>([])
 // 当前活动的选择时间
 const currentActivityTime = ref({
   stdChooseStartDate: new Date(),
@@ -82,7 +80,7 @@ async function viewDetail(data: any) {
   try {
     // 使用uni.downloadFile直接下载图片文件
     const downloadResult = await uni.downloadFile({
-      url: `${localhost}/api/teacher/getTeacherResume?teacherId=${data.teacherId}`,
+      url: `${API_BASE_URL}/api/teacher/getTeacherResume?teacherId=${data.teacherId}`,
     })
 
     if (downloadResult.statusCode === 200) {
@@ -166,6 +164,11 @@ function toggleSelect(teacherId: string) {
     peopleList.value = updatedList
   }
 
+  // 同步 currentTeacher 引用
+  if (currentTeacher.value && currentTeacher.value.teacherId === teacherId) {
+    currentTeacher.value = updatedList[index]
+  }
+
   // 更新已选列表
   if (!wasSelected) {
     selectedMentors.value = [
@@ -179,17 +182,14 @@ function toggleSelect(teacherId: string) {
     ]
   }
   else {
-    // 先找到对应的 index 并清除优先级，再从 selectedMentors 中移除
     const mentorIndex = selectedMentors.value.findIndex(
       item => item.teacherId === teacherId,
     )
     if (mentorIndex !== -1) {
-      priority.value.splice(mentorIndex, 1)
-      selectedMentors.value.splice(mentorIndex, 1)
+      selectedMentors.value = selectedMentors.value.filter((_, i) => i !== mentorIndex)
+      priority.value = priority.value.filter((_, i) => i !== mentorIndex)
     }
   }
-
-  console.log('更新后的已选导师:', selectedMentors.value)
 }
 
 // 切换提交卡片显示状态
@@ -371,13 +371,10 @@ function preventTouchMove() {}
 onLoad(async () => {
   calculateScrollHeight()
 
-  // 中本判断
-  if (store.userInfo.username[store.userInfo.username.length - 5] === '8') {
-    isEight.value = true
-  }
-
   uni.showLoading({ title: '加载中...' })
   try {
+    const stdMsg: any = await getStudentMsg(store.userInfo.username)
+    studentMajor.value = stdMsg?.data?.major || '普通'
     const res: any = await getTeacherList()
     const teacherList: any = await getTeacherListInActivity(
       useUserStore().userInfo.activityId,
@@ -438,6 +435,10 @@ onLoad(async () => {
         && item.selectedNum !== undefined
         && item.maxSelectedNum === item.selectedNum
       ) {
+        return false
+      }
+      const allowed = item.allowedMajors
+      if (Array.isArray(allowed) && allowed.length > 0 && !allowed.includes(studentMajor.value)) {
         return false
       }
       return true
@@ -530,7 +531,7 @@ onLoad(async () => {
         </view>
         <view
           v-for="item in majorList"
-          :key="item.id"
+          :key="item._id || item.teacherId"
           class="ios-card mb-4"
           style="padding: 0"
         >
@@ -583,7 +584,7 @@ onLoad(async () => {
         </view>
         <view
           v-for="item in publicList"
-          :key="item.id"
+          :key="item._id || item.teacherId"
           class="ios-card mb-4"
           style="padding: 0"
         >
@@ -636,7 +637,7 @@ onLoad(async () => {
         </view>
         <view
           v-for="item in peopleList"
-          :key="item.id"
+          :key="item._id || item.teacherId"
           class="ios-card mb-4"
           style="padding: 0"
         >
@@ -746,7 +747,7 @@ onLoad(async () => {
       <view class="card-content">
         <view
           v-for="(item, index) in selectedMentors"
-          :key="item.id"
+          :key="item._id || item.teacherId"
           class="mentor-item border-b border-gray-100 py-3"
         >
           <text class="mentor-name">

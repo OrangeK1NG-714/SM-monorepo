@@ -111,7 +111,7 @@
               :auto-upload="false"
               :on-change="handleFileChange"
               :before-upload="beforeUpload"
-              accept=".jpg,.jpeg,.png,.gif,.pdf"
+              accept=".jpg,.jpeg,.png,.gif"
               :show-file-list="true"
               :file-list="fileList"
             >
@@ -214,11 +214,15 @@ const userFormRules = reactive({
 const options = [
   {
     label: "管理员",
-    value: 1,
+    value: "admin",
   },
   {
-    label: "编辑",
-    value: 2,
+    label: "老师",
+    value: "teacher",
+  },
+  {
+    label: "学生",
+    value: "student",
   },
 ];
 
@@ -262,8 +266,11 @@ const handleSelectAll = (selection) => {
       }
     });
 
-    // 确保所有数据都被选中（全选所有页）
-    selectedUsers.value = [...new Set([...selectedUsers.value, ...tableData.value])];
+    // 确保所有数据都被选中（全选所有页，基于_id去重）
+    const merged = new Map();
+    selectedUsers.value.forEach(u => merged.set(u._id, u));
+    tableData.value.forEach(u => merged.set(u._id, u));
+    selectedUsers.value = [...merged.values()];
   } else {
     // 取消全选 - 只取消当前页的选中
     const currentPageIds = paginatedData.value.map(item => item._id);
@@ -286,34 +293,56 @@ watch([currentPage, pageSize], async () => {
   });
 });
 
-//编辑回调
 const handleEdit = async (data) => {
-  console.log(data);
-  
-  // const res = await axios.get(`/adminapi/user/list/${data._id}`);
-  // Object.assign(userForm, res.data.data[0]);
-  // console.log(userForm);
-  // dialogVisible.value = true;
+  Object.assign(userForm, {
+    _id: data._id,
+    username: data.username,
+    password: '',
+    role: data.role,
+    introduction: data.introduction || '',
+  });
+  dialogVisible.value = true;
 };
 
-//编辑确认回调
 const handleEditConfirm = () => {
   userFormRef.value.validate(async (valid) => {
     if (valid) {
-      //更新后端
-      await axios.put(`/adminapi/user/list/${userForm._id}`, userForm);
-      //dialog隐藏
-      dialogVisible.value = false;
-      //获取table数据
-      getTableData();
+      try {
+        const res = await axios.put('/api/admin/updateUser', {
+          id: userForm._id,
+          username: userForm.username,
+          role: userForm.role,
+        });
+        if (res.data.code === 200) {
+          ElMessage.success('修改成功');
+          dialogVisible.value = false;
+          getTableData();
+        } else {
+          ElMessage.error(res.data.msg || '修改失败');
+        }
+      } catch (error) {
+        console.error('编辑用户失败:', error);
+        ElMessage.error('修改失败，请重试');
+      }
     }
   });
 };
 
 const handleDelete = async (data) => {
-  console.log(data);
-  await axios.delete(`/adminapi/user/list/${data._id}`);
-  getTableData();
+  try {
+    const res = await axios.delete('/api/admin/deleteUser', {
+      data: { id: data._id },
+    });
+    if (res.data.code === 200) {
+      ElMessage.success('删除成功');
+      getTableData();
+    } else {
+      ElMessage.error(res.data.msg || '删除失败');
+    }
+  } catch (error) {
+    console.error('删除用户失败:', error);
+    ElMessage.error('删除失败，请重试');
+  }
 };
 
 //重置密码
