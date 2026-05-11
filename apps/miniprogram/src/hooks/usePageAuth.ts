@@ -6,7 +6,8 @@ const loginRoute = import.meta.env.VITE_LOGIN_URL
 const isDev = import.meta.env.DEV
 function isLogined() {
   const userStore = useUserStore()
-  return !!userStore.userInfo.username
+  const accessToken = uni.getStorageSync('accessToken')
+  return !!userStore.userInfo.username && !!accessToken
 }
 // 检查当前页面是否需要登录
 export function usePageAuth() {

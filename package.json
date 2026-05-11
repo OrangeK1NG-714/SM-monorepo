@@ -12,9 +12,13 @@
     "dev:h5": "pnpm --filter miniprogram dev:h5",
     "dev:admin": "pnpm --filter admin dev",
     "dev:server": "pnpm --filter server dev",
+    "dev:all": "concurrently -n mp,admin,server -c blue,green,yellow \"pnpm dev:h5\" \"pnpm dev:admin\" \"pnpm dev:server\"",
     "build:mp": "pnpm --filter miniprogram build:mp",
     "build:h5": "pnpm --filter miniprogram build:h5",
     "build:admin": "pnpm --filter admin build",
+    "build:all": "pnpm build:h5 && pnpm build:admin",
+    "start:server": "pnpm --filter server start",
+    "stop:server": "pnpm --filter server stop",
     "lint": "pnpm --filter miniprogram lint",
     "lint:fix": "pnpm --filter miniprogram lint:fix",
     "prepare": "husky"
@@ -22,10 +26,11 @@
   "devDependencies": {
     "@commitlint/cli": "^19.8.1",
     "@commitlint/config-conventional": "^19.8.1",
+    "concurrently": "^9.2.1",
     "husky": "^9.1.7",
     "lint-staged": "^15.2.10"
   },
   "lint-staged": {
-    "apps/miniprogram/**/*.{js,ts,vue}": "eslint --fix"
+    "apps/miniprogram/**/*.{js,ts,vue}": "eslint --fix --config apps/miniprogram/eslint.config.mjs"
   }
 }

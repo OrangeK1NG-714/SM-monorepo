@@ -19,6 +19,8 @@ interface IRefreshTokenResult {
 
 // 是否正在刷新token
 let isRefreshing = false
+// 防止多个 401 触发多次重定向
+let isRedirectingToLogin = false
 // 等待token刷新完成的请求队列
 let requestQueue: Array<{
   resolve: (value: unknown) => void
@@ -64,9 +66,14 @@ function executeRequest<T>(options: CustomRequestOptions): Promise<IResData<T>> 
           resolve(res.data as IResData<T>)
         }
         else if (res.statusCode === 401) {
-          // 401错误 -> 清理用户信息，跳转到登录页
           clearAllToken()
-          uni.redirectTo({ url: '/pages/login/login' })
+          if (!isRedirectingToLogin) {
+            isRedirectingToLogin = true
+            uni.redirectTo({
+              url: '/pages/login/login',
+              complete: () => { isRedirectingToLogin = false },
+            })
+          }
           reject(new Error('登录已过期，请重新登录'))
         }
         else {

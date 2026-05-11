@@ -10,7 +10,6 @@
 <script lang="ts" setup>
 import { writeStdInfo } from '@/api/stdInfo'
 import { useUserStore } from '@/store/user'
-import PLATFORM from '@/utils/platform'
 
 // 定义表单数据类型
 interface StudentForm {
@@ -26,7 +25,7 @@ interface StudentForm {
 }
 
 defineOptions({
-  name: 'Home',
+  name: 'UserMsgPage',
 })
 // 获取屏幕边界到安全区域距离
 let safeAreaInsets
@@ -79,7 +78,6 @@ const formData = ref<StudentForm>({
 })
 
 const showAgreement = ref(false)
-const showDataUsageAgreement = ref(false)
 const focusedField = ref<string | null>(null)
 const submitting = ref(false)
 
@@ -113,8 +111,9 @@ function uploadResume() {
 
       console.log('上传参数:', { fileName, studentId, filePath: tempFilePath })
 
+      uni.showLoading({ title: '上传中...' })
       uni.uploadFile({
-        url: 'http://richardq.tech:7001/api/student/uploadResume',
+        url: 'https://richardq.tech/api/student/uploadResume',
         filePath: tempFilePath,
         name: 'file',
         formData: {
@@ -123,14 +122,19 @@ function uploadResume() {
           filePath: tempFilePath,
         },
         success(res) {
-          console.log(res)
           if (res.statusCode === 200) {
-            uni.showToast({
-              title: '上传成功',
-              icon: 'success',
-            })
+            uni.showToast({ title: '上传成功', icon: 'success' })
             formData.value.resumeName = fileName
           }
+          else {
+            uni.showToast({ title: '上传失败，请重试', icon: 'none' })
+          }
+        },
+        fail() {
+          uni.showToast({ title: '上传失败，请检查网络', icon: 'none' })
+        },
+        complete() {
+          uni.hideLoading()
         },
       })
     },
@@ -146,26 +150,6 @@ function submitForm() {
   }
 
   showAgreement.value = true
-  // 显示数据使用协议弹窗
-  // showDataUsageAgreement.value = true
-}
-
-function handleDataUsageAgree() {
-  showDataUsageAgreement.value = false
-
-  if (!validateForm()) {
-    return
-  }
-
-  // 提交表单逻辑
-  console.log('提交表单', formData.value)
-  writeStdInfo(formData.value).then((res) => {
-    uni.showToast({
-      title: '提交成功',
-      icon: 'success',
-    })
-    uni.navigateTo({ url: '/pages/index/index' })
-  })
 }
 
 function validateForm(): boolean {
@@ -261,7 +245,6 @@ function handleDisagree() {
 }
 
 async function handleAgree() {
-  // 第二层校验（兜底）：即使有人绕过 submitForm，也不能提交
   if (!validateForm()) {
     showAgreement.value = false
     return
@@ -273,25 +256,21 @@ async function handleAgree() {
 
   submitting.value = true
   showAgreement.value = false
+  uni.showLoading({ title: '提交中...' })
 
   try {
     await writeStdInfo(formData.value)
-    uni.showToast({
-      title: '提交成功',
-      icon: 'success',
-    })
-    uni.navigateTo({ url: '/pages/index/index' })
+    uni.showToast({ title: '提交成功', icon: 'success' })
+    uni.redirectTo({ url: '/pages/index/index' })
+  }
+  catch (error) {
+    console.error('提交失败:', error)
+    uni.showToast({ title: '提交失败，请重试', icon: 'none' })
   }
   finally {
     submitting.value = false
+    uni.hideLoading()
   }
-}
-
-function viewFullAgreement() {
-  // 查看完整协议逻辑
-  // uni.navigateTo({
-  //   url: '/pages/agreement/index',
-  // })
 }
 </script>
 
@@ -537,13 +516,6 @@ function viewFullAgreement() {
           </view>
           <view class="mb-2">
             你可以查看《用户协议》和《隐私政策》了解更多细节。
-          </view>
-          <view
-            class="mb-4 text-[26rpx]"
-            style="color: var(--ios-blue)"
-            @tap="viewFullAgreement"
-          >
-            查看完整条款
           </view>
         </view>
       </scroll-view>

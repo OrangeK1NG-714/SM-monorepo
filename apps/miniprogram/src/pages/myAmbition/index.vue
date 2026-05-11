@@ -2,6 +2,7 @@
 {
   style: {
     navigationBarTitleText: '志愿查看',
+    enablePullDownRefresh: true,
   }
 }
 </route>
@@ -22,14 +23,27 @@ const sortedList = ref<any[]>([])
 const mentor = ref<string>('')
 const isProgressPage = ref(false)
 
-// 获取学生导师信息
-async function getStudentMentor(std_id: string) {
+async function loadData() {
+  const res: any = await getChooseCountWithActivityId(userStore.userInfo.activityId, userStore.userInfo.username)
+  if (res.length === 0) {
+    uni.showToast({ title: '您还未选择志愿', icon: 'none', duration: 2000 })
+  }
+  res.sort((a: any, b: any) => a.order - b.order)
+  const teacherList: any = await getTeacherList()
 
-}
+  const teacherNameMap: Record<number, string> = {}
+  teacherList.data.forEach((item) => {
+    teacherNameMap[item.teacherId] = item.name
+  })
 
-// 加载志愿数据
-async function loadVolunteerData() {
-
+  const finalChoice: any = await getStudentFinalChoice(userStore.userInfo.username, userStore.userInfo.activityId)
+  sortedList.value = res.map(item => ({
+    ...item,
+    mentor_name: teacherNameMap[item.teacherId],
+  }))
+  if (finalChoice.data) {
+    mentor.value = teacherNameMap[finalChoice.teacherId]
+  }
 }
 
 // 导航到选择页面
@@ -47,36 +61,31 @@ function navigateToMyChoices() {
 }
 
 onLoad(async () => {
-  console.log(userStore.userInfo)
-
-  const res: any = await getChooseCountWithActivityId(userStore.userInfo.activityId, userStore.userInfo.username)
-  console.log(res)
-  if (res.length === 0) {
-    uni.showToast({
-      title: '您还未选择志愿',
-      icon: 'none',
-      duration: 2000, // 增加持续时间
-    })
+  uni.showLoading({ title: '加载中...' })
+  try {
+    await loadData()
   }
-  res.sort((a: any, b: any) => a.order - b.order)
-  const teacherList: any = await getTeacherList()
-  console.log(teacherList)
+  catch (error) {
+    console.error('加载数据失败:', error)
+    uni.showToast({ title: '数据加载失败，请下拉刷新重试', icon: 'none' })
+  }
+  finally {
+    uni.hideLoading()
+  }
+})
 
-  const teacherNameMap: Record<number, string> = {}
-  teacherList.data.forEach((item) => {
-    teacherNameMap[item.teacherId] = item.name
-  })
-  console.log(teacherNameMap)
-  console.log(res)
-
-  const finalChoice: any = await getStudentFinalChoice(userStore.userInfo.username, userStore.userInfo.activityId)
-  console.log(finalChoice)
-  sortedList.value = res.map(item => ({
-    ...item,
-    mentor_name: teacherNameMap[item.teacherId],
-  }))
-  if (finalChoice.data) {
-    mentor.value = teacherNameMap[finalChoice.teacherId]
+onPullDownRefresh(async () => {
+  try {
+    sortedList.value = []
+    mentor.value = ''
+    await loadData()
+  }
+  catch (error) {
+    console.error('刷新失败:', error)
+    uni.showToast({ title: '刷新失败，请重试', icon: 'none' })
+  }
+  finally {
+    uni.stopPullDownRefresh()
   }
 })
 </script>

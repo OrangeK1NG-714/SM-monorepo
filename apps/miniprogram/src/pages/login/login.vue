@@ -16,15 +16,11 @@ import { saveOpenid } from '@/api/stdInfo'
 import { useUserStore } from '@/store/user'
 
 defineOptions({
-  name: 'Home',
+  name: 'LoginPage',
 })
 
 const IOS_BLUE = '#0A84FF'
-
-onLoad(() => {
-  const useStore = useUserStore()
-  console.log(useStore.userInfo)
-})
+const userStore = useUserStore()
 // 获取屏幕边界到安全区域距离
 let safeAreaInsets
 let systemInfo
@@ -85,8 +81,6 @@ async function handleLogin() {
         title: '登录成功',
         icon: 'success',
       })
-      // 存储双token
-      const useStore = useUserStore()
       const {
         username: resUsername,
         role,
@@ -95,32 +89,13 @@ async function handleLogin() {
         expiresIn,
       } = res.data
 
-      console.log('[login] res.data:', JSON.stringify(res.data))
-      console.log('[login] accessToken:', accessToken)
-      console.log('[login] refreshToken:', refreshToken)
-
-      // 兼容旧版本单token：后端可能只返回 token 字段
       const finalAccessToken = accessToken || (res.data as any).token
       const finalRefreshToken = refreshToken || (res.data as any).token
 
-      // 设置用户信息
-      useStore.setUserInfo(resUsername, role)
-      // 设置双token（先同步存储到本地，确保后续请求能获取到）
-      useStore.setTokens(finalAccessToken, finalRefreshToken, expiresIn)
+      userStore.setUserInfo(resUsername, role)
+      userStore.setTokens(finalAccessToken, finalRefreshToken, expiresIn)
 
-      // 验证token是否已存储
-      const storedToken = uni.getStorageSync('accessToken')
-      console.log(
-        '[login] after setTokens, storedToken:',
-        storedToken ? 'exists' : 'null',
-      )
-
-      // 确保token已存储后再发起请求
-      // 获取用户详细信息
-      console.log('[login] calling getUserInfo...')
       const resUserInfo = await getUserInfo(resUsername, role)
-      console.log(resUserInfo)
-      console.log(res)
 
       // 仅小程序端：登录成功后获取 openid 并上报后端
       // #ifdef MP-WEIXIN
@@ -141,21 +116,22 @@ async function handleLogin() {
       // #endif
 
       if (role === 'student' && resUserInfo.isEmpty === 0) {
-        // 跳转页面
-        uni.navigateTo({
+        uni.redirectTo({
           url: '/pages/userMsg/index',
         })
       }
       else {
-        // 跳转页面
-        uni.navigateTo({
+        uni.redirectTo({
           url: '/pages/index/index',
         })
       }
     }
+    else {
+      uni.showToast({ title: res.msg || '登录失败', icon: 'none' })
+    }
   }
   catch (error) {
-    console.log(error)
+    userStore.clearUserInfo()
     uni.showToast({ title: '登录失败，请稍后重试', icon: 'none' })
   }
   finally {
@@ -172,10 +148,6 @@ async function handleResetPassword() {
     url: '/pages/resetPassword/index',
   })
 }
-// 测试 uni API 自动引入
-onLoad(() => {
-  console.log()
-})
 </script>
 
 <template>

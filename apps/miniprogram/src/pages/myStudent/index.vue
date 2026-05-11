@@ -78,14 +78,23 @@ function handleCloseDialog() {
   dialogVisible.value = false
 }
 onLoad(async () => {
-  const res: any = await getSelectState({
-    teacherId: userStore.userInfo.username,
-    activityId: userStore.userInfo.activityId,
-  })
-  // 按 order 排序：1111, 2222, 3333
-  studentList.value = res.sort(
-    (a: any, b: any) => (a.order || 999) - (b.order || 999),
-  )
+  uni.showLoading({ title: '加载中...' })
+  try {
+    const res: any = await getSelectState({
+      teacherId: userStore.userInfo.username,
+      activityId: userStore.userInfo.activityId,
+    })
+    studentList.value = res.sort(
+      (a: any, b: any) => (a.order || 999) - (b.order || 999),
+    )
+  }
+  catch (error) {
+    console.error('加载学生列表失败:', error)
+    uni.showToast({ title: '数据加载失败，请重试', icon: 'none' })
+  }
+  finally {
+    uni.hideLoading()
+  }
 })
 </script>
 

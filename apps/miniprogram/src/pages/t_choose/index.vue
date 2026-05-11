@@ -43,6 +43,7 @@ const secondChoseStudentList = ref<any[]>([])
 const thirdList = ref<any[]>([])
 const thirdChoseStudentList = ref<any[]>([])
 const dialogVisible = ref(false)
+const isSelecting = ref(false)
 
 const currentStudent = ref<any>(null)
 // 已选择人数
@@ -56,28 +57,30 @@ const navItems = [
 ]
 
 onLoad(async () => {
-  const res: any = await getChooseCount(userStore.userInfo.username, userStore.userInfo.activityId)
-  console.log(res, 'test')
-  await categorizeByPriority(res)
-  firstChoseStudentList.value = firstList.value.filter(item => item.finalTeacher === item.teacherId)
-  secondChoseStudentList.value = secondList.value.filter(item => item.finalTeacher === item.teacherId)
-  thirdChoseStudentList.value = thirdList.value.filter(item => item.finalTeacher === item.teacherId)
-  // 计算已选择人数
-  selectedNum.value = firstChoseStudentList.value.length + secondChoseStudentList.value.length + thirdChoseStudentList.value.length
-  console.log(selectedNum.value, 'selectedNum')
+  uni.showLoading({ title: '加载中...' })
+  try {
+    const res: any = await getChooseCount(userStore.userInfo.username, userStore.userInfo.activityId)
+    await categorizeByPriority(res)
+    firstChoseStudentList.value = firstList.value.filter(item => item.finalTeacher === item.teacherId)
+    secondChoseStudentList.value = secondList.value.filter(item => item.finalTeacher === item.teacherId)
+    thirdChoseStudentList.value = thirdList.value.filter(item => item.finalTeacher === item.teacherId)
+    selectedNum.value = firstChoseStudentList.value.length + secondChoseStudentList.value.length + thirdChoseStudentList.value.length
 
-  const maxSelectedNum: any = await getMaxSelectNum(userStore.userInfo.username, userStore.userInfo.activityId)
-  console.log(maxSelectedNum, 'maxSelectedNum')
-  userStore.userInfo.maxSelectNum = maxSelectedNum.maxSelectNum
-  console.log(userStore.userInfo.maxSelectNum, 'maxSelectNum')
+    const maxSelectedNum: any = await getMaxSelectNum(userStore.userInfo.username, userStore.userInfo.activityId)
+    userStore.userInfo.maxSelectNum = maxSelectedNum.maxSelectNum
 
-  // 加载时间数据
-  const teacherActivityList: any = await getActivityList()
-  thisActivity.value = teacherActivityList.find(item => item._id === userStore.userInfo.activityId)
-  console.log(thisActivity.value, 'thisActivity')
+    const teacherActivityList: any = await getActivityList()
+    thisActivity.value = teacherActivityList.find(item => item._id === userStore.userInfo.activityId)
 
-  formattedDate.value = formatDate(new Date())
-  console.log(formattedDate.value, 'formattedDate.value')
+    formattedDate.value = formatDate(new Date())
+  }
+  catch (error) {
+    console.error('加载数据失败:', error)
+    uni.showToast({ title: '数据加载失败，请重试', icon: 'none' })
+  }
+  finally {
+    uni.hideLoading()
+  }
 })
 
 function formatDate(date: Date): string {
@@ -245,9 +248,9 @@ function hideTeacherForm() {
 }
 
 async function toggleSelect(item: any) {
-  console.log(item)
+  if (isSelecting.value)
+    return
 
-  // 检查当前是否在允许选择的时间范围内
   const currentTime = new Date().getTime()
   let isInTime = false
   const targetTab = item.order === 1 ? 'first' : item.order === 2 ? 'second' : 'third'
@@ -268,7 +271,6 @@ async function toggleSelect(item: any) {
     isInTime = currentTime >= start && currentTime <= end
   }
 
-  // 如果没有活动数据，默认允许操作（防止系统出错时无法操作）
   if (!thisActivity.value) {
     isInTime = true
   }
@@ -282,23 +284,36 @@ async function toggleSelect(item: any) {
     return
   }
 
+  // 取消选择时需要二次确认
+  if (item.isChose) {
+    const [modalErr, modalRes] = await uni.showModal({
+      title: '确认取消',
+      content: `确定要取消选择该学生吗？`,
+      confirmText: '确定取消',
+      cancelText: '再想想',
+    })
+    if (modalErr || !modalRes.confirm)
+      return
+  }
+
+  isSelecting.value = true
   try {
     if (item.isChose) {
-      const res = await cancelSelect({
+      await cancelSelect({
         studentId: item.studentId,
         teacherId: userStore.userInfo.username,
         activityId: item.activityId,
       })
-      console.log(item.studentId, item.teacherId, item.activityId)
-      console.log(res)
+      await updateChoose({
+        studentId: item.studentId,
+        teacherId: item.teacherId,
+        activityId: item.activityId,
+      })
       item.isChose = false
-      item.finalTeacher = '' // 清空最终选择的老师
+      item.finalTeacher = ''
       selectedNum.value--
     }
     else {
-      console.log(userStore.userInfo.maxSelectNum)
-
-      // 判断当前选择人数是否小于最大允许人数
       if (selectedNum.value >= userStore.userInfo.maxSelectNum) {
         uni.showToast({
           title: `已达到最大选择人数限制(${userStore.userInfo.maxSelectNum}人)`,
@@ -307,34 +322,34 @@ async function toggleSelect(item: any) {
         return
       }
 
-      const res = await selectStudent({
+      await selectStudent({
         studentId: item.studentId,
         teacherId: item.teacherId,
         activityId: item.activityId,
         data: item.data,
         order: item.order,
       })
-
-      console.log(res)
+      await updateChoose({
+        studentId: item.studentId,
+        teacherId: item.teacherId,
+        activityId: item.activityId,
+      })
       item.isChose = true
-      item.finalTeacher = userStore.userInfo.username // 设置为当前老师
+      item.finalTeacher = userStore.userInfo.username
       selectedNum.value++
     }
 
-    // 重新计算三个志愿学生列表，确保UI显示的数量能够实时更新
     firstChoseStudentList.value = firstList.value.filter(item => item.finalTeacher === item.teacherId)
     secondChoseStudentList.value = secondList.value.filter(item => item.finalTeacher === item.teacherId)
     thirdChoseStudentList.value = thirdList.value.filter(item => item.finalTeacher === item.teacherId)
   }
   catch (error) {
-    console.log(error)
+    console.error('操作失败:', error)
+    uni.showToast({ title: '操作失败，请重试', icon: 'none' })
   }
-  const updateRes = await updateChoose({
-    studentId: item.studentId,
-    teacherId: item.teacherId,
-    activityId: item.activityId,
-  })
-  console.log(updateRes)
+  finally {
+    isSelecting.value = false
+  }
 }
 
 function updateLocalData(_id: string, newStatus: boolean) {
@@ -527,7 +542,7 @@ function handleTabChange(e: any) {
               :class="item.isChose ? 'ios-btn--primary' : (item.finalTeacher && item.finalTeacher !== item.teacherId ? 'ios-btn--secondary' : 'ios-btn--secondary')"
               :style="item.isChose ? { backgroundColor: IOS_BLUE } : {}"
               style="padding: 18rpx 18rpx; font-size: 28rpx;"
-              :disabled="item.finalTeacher.length > 0 && item.finalTeacher !== item.teacherId"
+              :disabled="isSelecting || (item.finalTeacher.length > 0 && item.finalTeacher !== item.teacherId)"
               @click="toggleSelect(item)"
             >
               {{ item.finalTeacher === item.teacherId ? '已选' : (item.finalTeacher.length > 0 && item.finalTeacher !== item.teacherId) ? '被选走' : '选择' }}
@@ -565,7 +580,7 @@ function handleTabChange(e: any) {
               :class="item.isChose ? 'ios-btn--primary' : (item.finalTeacher && item.finalTeacher !== item.teacherId ? 'ios-btn--secondary' : 'ios-btn--secondary')"
               :style="item.isChose ? { backgroundColor: IOS_BLUE } : {}"
               style="padding: 18rpx 18rpx; font-size: 28rpx;"
-              :disabled="item.finalTeacher.length > 0 && item.finalTeacher !== item.teacherId"
+              :disabled="isSelecting || (item.finalTeacher.length > 0 && item.finalTeacher !== item.teacherId)"
               @click="toggleSelect(item)"
             >
               {{ item.finalTeacher === item.teacherId ? '已选' : (item.finalTeacher.length > 0 && item.finalTeacher !== item.teacherId) ? '被选走' : '选择' }}
@@ -603,7 +618,7 @@ function handleTabChange(e: any) {
               :class="item.isChose ? 'ios-btn--primary' : (item.finalTeacher && item.finalTeacher !== item.teacherId ? 'ios-btn--secondary' : 'ios-btn--secondary')"
               :style="item.isChose ? { backgroundColor: IOS_BLUE } : {}"
               style="padding: 18rpx 18rpx; font-size: 28rpx;"
-              :disabled="item.finalTeacher.length > 0 && item.finalTeacher !== item.teacherId"
+              :disabled="isSelecting || (item.finalTeacher.length > 0 && item.finalTeacher !== item.teacherId)"
               @click="toggleSelect(item)"
             >
               {{ item.finalTeacher === item.teacherId ? '已选' : (item.finalTeacher.length > 0 && item.finalTeacher !== item.teacherId) ? '被选走' : '选择' }}

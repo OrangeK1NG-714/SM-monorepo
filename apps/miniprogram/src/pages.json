@@ -52,7 +52,8 @@
       "path": "pages/myAmbition/index",
       "type": "page",
       "style": {
-        "navigationBarTitleText": "志愿查看"
+        "navigationBarTitleText": "志愿查看",
+        "enablePullDownRefresh": true
       }
     },
     {

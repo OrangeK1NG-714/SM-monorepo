@@ -29,6 +29,7 @@ const IOS_BLUE = '#0A84FF'
 const SUBSCRIBE_TEMPLATE_ID = 'eLfrwx8SgoCSv3vXzAQNUhdCXr69xg5mhMio_xFHd3U'
 
 // 数据定义
+const isSubmitting = ref(false) // 防止重复提交
 const activeTab = ref('major') // 当前激活的选项卡
 const showSubmitCard = ref(false) // 是否显示提交卡片
 const scrollHeight = ref(0) // 滚动区域高度
@@ -148,12 +149,10 @@ function toggleSelect(teacherId: string) {
     return
   }
 
-  // 原子化更新数据
   const updatedList = [...listToUpdate]
   updatedList[index] = {
     ...teacher,
     selected: !wasSelected,
-    number: wasSelected ? teacher.number - 1 : teacher.number + 1,
   }
 
   // 更新对应的列表
@@ -180,15 +179,13 @@ function toggleSelect(teacherId: string) {
     ]
   }
   else {
-    selectedMentors.value = selectedMentors.value.filter(
-      item => item.teacherId !== teacherId,
+    // 先找到对应的 index 并清除优先级，再从 selectedMentors 中移除
+    const mentorIndex = selectedMentors.value.findIndex(
+      item => item.teacherId === teacherId,
     )
-    // 同步清除对应志愿顺序
-    const priorityIndex = priority.value.findIndex(
-      (_, i) => selectedMentors.value[i]?.teacherId === teacherId,
-    )
-    if (priorityIndex !== -1) {
-      priority.value.splice(priorityIndex, 1)
+    if (mentorIndex !== -1) {
+      priority.value.splice(mentorIndex, 1)
+      selectedMentors.value.splice(mentorIndex, 1)
     }
   }
 
@@ -243,8 +240,8 @@ async function requestSubmitSubscribeMessage() {
 }
 
 async function handleSubmit() {
-  // uni.showToast({ title: '志愿提交成功', icon: 'success' })
-  // showSubmitCard.value = false
+  if (isSubmitting.value)
+    return
 
   // 1.检查是否选了3个导师
   if (selectedMentors.value.length !== 3) {
@@ -274,11 +271,9 @@ async function handleSubmit() {
     return
   }
   const nowDate = new Date()
-  console.log(nowDate)
   const isIn
     = nowDate >= currentActivityTime.value.stdChooseStartDate
       && nowDate <= currentActivityTime.value.stdChooseEndDate
-  console.log(isIn)
   if (!isIn) {
     uni.showToast({
       title: '当前不在活动时间内',
@@ -287,12 +282,6 @@ async function handleSubmit() {
     })
     return
   }
-  // // currentActivityTime.value.stdChooseStartDate = formatDate(currentActivityTime.value.stdChooseStartDate)
-  // // currentActivityTime.value.stdChooseEndDate = new Date(currentActivityTime.value.stdChooseEndDate)
-  // // console.log(currentActivityTime.value.stdChooseStartDate)
-  // // console.log(currentActivityTime.value.stdChooseEndDate)
-
-  // console.log(123)
 
   // 4-1.检查是否提交过志愿
   const isSubmit = await getChooseCountWithActivityId(
@@ -307,43 +296,55 @@ async function handleSubmit() {
     })
     return
   }
-  console.log(priority.value)
 
-  // 4-2. 先请求一次性订阅消息授权（微信小程序）
-  await requestSubmitSubscribeMessage()
+  // 确认弹窗
+  const [modalErr, modalRes] = await uni.showModal({
+    title: '确认提交',
+    content: '志愿提交后不可修改，确定提交吗？',
+    confirmText: '确定提交',
+    cancelText: '再想想',
+  })
+  if (modalErr || !modalRes.confirm)
+    return
 
-  // 4-3. 提交志愿
-  const submitData = selectedMentors.value.map((mentor, index) => ({
-    activityId: store.userInfo.activityId,
-    studentId: store.userInfo.username,
-    teacherId: mentor.teacherId,
-    order: priority.value[index],
-    isChose: false,
-    createTime: new Date().toString(),
-    subscribeTemplateId: SUBSCRIBE_TEMPLATE_ID,
-    subscribeStatus: 'requested',
-  }))
-  console.log(submitData)
-  // 5. 提交数据
+  isSubmitting.value = true
+  uni.showLoading({ title: '提交中...' })
   try {
+    // 先请求一次性订阅消息授权（微信小程序）
+    await requestSubmitSubscribeMessage()
+
+    const submitData = selectedMentors.value.map((mentor, index) => ({
+      activityId: store.userInfo.activityId,
+      studentId: store.userInfo.username,
+      teacherId: mentor.teacherId,
+      order: priority.value[index],
+      isChose: false,
+      createTime: new Date().toString(),
+      subscribeTemplateId: SUBSCRIBE_TEMPLATE_ID,
+      subscribeStatus: 'requested',
+    }))
+
     for (const data of submitData) {
-      const response = await selectTeacher(data)
-      console.log('选择成功:', response)
+      await selectTeacher(data)
     }
     uni.showToast({
       title: '提交成功',
       icon: 'success',
       duration: 2000,
     })
-    uni.navigateTo({ url: '/pages/myAmbition/index' })
+    uni.redirectTo({ url: '/pages/myAmbition/index' })
   }
-  catch (error) {
+  catch (error: any) {
     console.error('选择失败:', error)
     uni.showToast({
-      title: error.data.msg,
+      title: error?.data?.msg || '提交失败，请重试',
       icon: 'none',
       duration: 2000,
     })
+  }
+  finally {
+    isSubmitting.value = false
+    uni.hideLoading()
   }
 }
 
@@ -367,144 +368,112 @@ function navigateToProgress() {
 // 阻止触摸移动
 function preventTouchMove() {}
 
-onLoad(() => {
-  calculateScrollHeight()
-})
 onLoad(async () => {
-  const store = useUserStore()
-  console.log(store.userInfo)
+  calculateScrollHeight()
+
   // 中本判断
   if (store.userInfo.username[store.userInfo.username.length - 5] === '8') {
     isEight.value = true
   }
 
-  const res: any = await getTeacherList()
-  const teacherList: any = await getTeacherListInActivity(
-    useUserStore().userInfo.activityId,
-  )
-  console.log(res.data)
-  console.log(teacherList)
-  // 提取teacherList中所有的teacherId
-  const existingTeacherIds = teacherList.map(teacher => teacher.teacherId)
-  console.log(existingTeacherIds)
-
-  // 获取所有导师的最大选择学生数
-  res.data.map(async (item) => {
-    const result: any = await getMaxSelectNum(
-      item.teacherId,
+  uni.showLoading({ title: '加载中...' })
+  try {
+    const res: any = await getTeacherList()
+    const teacherList: any = await getTeacherListInActivity(
       useUserStore().userInfo.activityId,
     )
-    // console.log(result)
-    if (result.maxSelectNum) {
-      item.maxSelectedNum = result.maxSelectNum
-    }
-    // console.log(item)
+    const existingTeacherIds = teacherList.map(teacher => teacher.teacherId)
 
-    // item.maxSelectedNum = result.data.maxSelectNum
-  })
-  // 过滤res.data，只保留存在于existingTeacherIds中的老师
-  const filteredTeachers = res.data.filter(teacher =>
-    existingTeacherIds.includes(teacher.teacherId),
-  )
-  console.log(filteredTeachers)
-
-  const requests = filteredTeachers.map(async (teacher) => {
-    try {
-      // const response =
-      const response: any = await getChooseCount(
-        teacher.teacherId,
+    // 获取所有导师的最大选择学生数
+    await Promise.all(res.data.map(async (item) => {
+      const result: any = await getMaxSelectNum(
+        item.teacherId,
         useUserStore().userInfo.activityId,
       )
-      console.log(response)
-      if (response.length > 0) {
-        let selectedNum = 0
-        for (let i = 0; i < response.length; i++) {
-          if (response[i].isChose) {
-            selectedNum++
+      if (result.maxSelectNum) {
+        item.maxSelectedNum = result.maxSelectNum
+      }
+    }))
+
+    const filteredTeachers = res.data.filter(teacher =>
+      existingTeacherIds.includes(teacher.teacherId),
+    )
+
+    const requests = filteredTeachers.map(async (teacher) => {
+      try {
+        const response: any = await getChooseCount(
+          teacher.teacherId,
+          useUserStore().userInfo.activityId,
+        )
+        if (response.length > 0) {
+          let selectedNum = 0
+          for (let i = 0; i < response.length; i++) {
+            if (response[i].isChose) {
+              selectedNum++
+            }
           }
+          teacher.selectedNum = selectedNum
         }
-        console.log(selectedNum)
-        console.log(teacher)
-        // if (teacher.maxSelectedNum === selectedNum) {
-        //   return
-        // }
-        teacher.selectedNum = selectedNum
+        return {
+          ...teacher,
+          number: response.length,
+          selected: false,
+        }
       }
-      return {
-        ...teacher,
-        number: response.length,
-        selected: false,
+      catch (error) {
+        console.error(`获取老师 ${teacher.name} 的选择学生数失败:`, error)
+        return {
+          ...teacher,
+          number: 0,
+          selected: false,
+        }
       }
-    }
-    catch (error) {
-      console.error(`获取老师 ${teacher.name} 的选择学生数失败:`, error)
-      // 如果请求失败，默认设为 0
-      return {
-        ...teacher,
-        number: 0,
-        selected: false,
+    })
+
+    const processedTeachers = await Promise.all(requests)
+
+    const processedTeachersAfterFilter = processedTeachers.filter((item) => {
+      if (
+        item.maxSelectedNum !== undefined
+        && item.selectedNum !== undefined
+        && item.maxSelectedNum === item.selectedNum
+      ) {
+        return false
       }
-    }
-  })
-  // 等待所有异步请求完成
-  const processedTeachers = await Promise.all(requests)
-  console.log('原始数据:', processedTeachers)
+      return true
+    })
 
-  // 使用filter方法过滤掉已达到最大选择数的导师数据
-  // 过滤条件：保留那些maxSelectedNum和selectedNum不相等的项
-  const processedTeachersAfterFilter = processedTeachers.filter((item) => {
-    // 如果maxSelectedNum和selectedNum存在且相等，则过滤掉
-    if (
-      item.maxSelectedNum !== undefined
-      && item.selectedNum !== undefined
-      && item.maxSelectedNum === item.selectedNum
-    ) {
-      console.log(
-        `过滤掉导师：${item.name || item.teacherId} (已达到最大选择数: ${item.selectedNum}/${item.maxSelectedNum})`,
-      )
-      return false
-    }
-    // 其他情况保留
-    return true
-  })
+    majorList.value = []
+    publicList.value = []
+    peopleList.value = []
 
-  console.log('过滤后的数据:', processedTeachersAfterFilter)
-  // 后续可以使用filteredTeachers替代processedTeachers进行分类和显示
-  // 根据teacherType分类数据
-  majorList.value = []
-  publicList.value = []
-  peopleList.value = []
+    processedTeachersAfterFilter.forEach((teacher) => {
+      switch (teacher.teacherType) {
+        case '0':
+          majorList.value.push(teacher)
+          break
+        case '1':
+          publicList.value.push(teacher)
+          break
+        case '2':
+          peopleList.value.push(teacher)
+          break
+      }
+    })
 
-  processedTeachersAfterFilter.forEach((teacher) => {
-    switch (teacher.teacherType) {
-      case '0':
-        majorList.value.push(teacher)
-        break
-      case '1':
-        publicList.value.push(teacher)
-        break
-      case '2':
-        peopleList.value.push(teacher)
-        break
-      default:
-        console.warn(`未知的教师类型: ${teacher.teacherType}`, teacher)
-    }
-  })
-
-  console.log('分类后的教师列表:', {
-    majorList: majorList.value,
-    publicList: publicList.value,
-    peopleList: peopleList.value,
-  })
-
-  // 查询活动详情
-  const res1: any = await getActivityDetail(useUserStore().userInfo.activityId)
-  // console.log(res1)
-  currentActivityTime.value.stdChooseEndDate = new Date(res1.stdChooseEndDate)
-  currentActivityTime.value.stdChooseStartDate = new Date(
-    res1.stdChooseStartDate,
-  )
-  console.log(currentActivityTime.value)
+    const res1: any = await getActivityDetail(useUserStore().userInfo.activityId)
+    currentActivityTime.value.stdChooseEndDate = new Date(res1.stdChooseEndDate)
+    currentActivityTime.value.stdChooseStartDate = new Date(
+      res1.stdChooseStartDate,
+    )
+  }
+  catch (error) {
+    console.error('加载数据失败:', error)
+    uni.showToast({ title: '数据加载失败，请重试', icon: 'none' })
+  }
+  finally {
+    uni.hideLoading()
+  }
 })
 </script>
 
@@ -802,9 +771,10 @@ onLoad(async () => {
       <button
         class="ios-btn ios-btn--primary mt-6 w-full"
         :style="{ backgroundColor: IOS_BLUE }"
+        :disabled="isSubmitting"
         @tap="handleSubmit"
       >
-        确认提交
+        {{ isSubmitting ? '提交中...' : '确认提交' }}
       </button>
     </view>
 

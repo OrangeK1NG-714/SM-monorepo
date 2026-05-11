@@ -13,12 +13,7 @@ import { updateStdPassword } from '@/api/stdInfo'
 import { useUserStore } from '@/store/user'
 
 defineOptions({
-  name: 'Home',
-})
-
-onLoad(() => {
-  const useStore = useUserStore()
-  console.log(useStore.userInfo)
+  name: 'ResetPasswordPage',
 })
 // 获取屏幕边界到安全区域距离
 let safeAreaInsets
@@ -110,30 +105,25 @@ async function handleResetPassword() {
       username: resetUsername.value,
       password: newPassword.value,
     })
-    console.log(res)
     if (res.code === 200) {
       uni.showToast({ title: '密码重置成功', icon: 'success' })
+      setTimeout(() => {
+        uni.redirectTo({ url: '/pages/login/login' })
+      }, 1500)
     }
-    uni.navigateTo({
-      url: '/pages/login/index',
-    })
+    else {
+      uni.showToast({ title: res.msg || '密码重置失败', icon: 'none' })
+    }
   }
-  catch (error) {
-    console.log(error)
-
-    uni.showToast({ title: `密码重置失败,${error.data.msg}`, icon: 'none' })
+  catch (error: any) {
+    console.error('密码重置失败:', error)
+    uni.showToast({ title: error?.data?.msg || '密码重置失败，请重试', icon: 'none' })
   }
   finally {
     isSubmitting.value = false
     uni.hideLoading()
   }
 }
-// 测试 uni API 自动引入
-onLoad(() => {
-  console.log()
-})
-
-console.log('index')
 </script>
 
 <template>
@@ -147,7 +137,7 @@ console.log('index')
       </view>
     </view>
 
-    <view class="px-5 pt-6 pb-10">
+    <view class="px-5 pb-10 pt-6">
       <view class="ios-card">
         <view class="ios-cell" :class="{ 'ios-cell--focused': focusedField === 'username' }">
           <view class="ios-cell__label">

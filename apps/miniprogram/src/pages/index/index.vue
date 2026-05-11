@@ -37,6 +37,7 @@ const endedList = ref<Array<any>>([])
 // console.log(endedList.value)
 
 const selectedActivity = ref<any | null>(null)
+const isEntering = ref(false)
 
 function formatDateRange(start: string, end: string) {
   const s = new Date(start)
@@ -116,34 +117,38 @@ function openMyStudent() {
 }
 
 async function enterSystem(id: string) {
-  uni.showToast({ title: '进入中…', icon: 'none' })
-  console.log(id)
-  console.log(useStore.userInfo.username)
-  if (useStore.userInfo.role === 'student') {
-    const res = await isStudentInActivity(id, useStore.userInfo.username)
-    console.log(res)
+  if (isEntering.value)
+    return
+  isEntering.value = true
+  uni.showLoading({ title: '进入中...' })
+  try {
     useStore.setActivityId(id)
-    if (res.code === 200) {
-      uni.navigateTo({
-        url: '/pages/s_choose/index',
-      })
+    if (useStore.userInfo.role === 'student') {
+      const res = await isStudentInActivity(id, useStore.userInfo.username)
+      if (res.code === 200) {
+        uni.navigateTo({ url: '/pages/s_choose/index' })
+      }
+      else {
+        uni.showToast({ title: '您不在此活动中！(有疑问请联系管理员)', icon: 'none' })
+      }
     }
-    else {
-      uni.showToast({ title: '您不在此活动中！(有疑问请联系管理员)', icon: 'none' })
+    else if (useStore.userInfo.role === 'teacher') {
+      const res = await isTeacherInActivity(id, useStore.userInfo.username)
+      if (res.code === 200) {
+        uni.navigateTo({ url: '/pages/t_choose/index' })
+      }
+      else {
+        uni.showToast({ title: '您不在此活动中！(有疑问请联系管理员)', icon: 'none' })
+      }
     }
   }
-  else if (useStore.userInfo.role === 'teacher') {
-    const res = await isTeacherInActivity(id, useStore.userInfo.username)
-    console.log(res)
-    useStore.setActivityId(id)
-    if (res.code === 200) {
-      uni.navigateTo({
-        url: '/pages/t_choose/index',
-      })
-    }
-    else {
-      uni.showToast({ title: '您不在此活动中！(有疑问请联系管理员)', icon: 'none' })
-    }
+  catch (error) {
+    console.error('进入系统失败:', error)
+    uni.showToast({ title: '进入失败，请重试', icon: 'none' })
+  }
+  finally {
+    isEntering.value = false
+    uni.hideLoading()
   }
 }
 
@@ -169,58 +174,42 @@ safeAreaInsets = systemInfo.safeAreaInsets
 // #endif
 
 onLoad(async () => {
-  const res: any = await getActivityList()
-  console.log(res)
+  uni.showLoading({ title: '加载中...' })
+  try {
+    const res: any = await getActivityList()
 
-  if (useStore.userInfo?.role === 'student') {
-    // 先检查用户是否在每个活动中
-    const promises = res.map(async (item) => {
-      return await isStudentInActivity(item._id, useStore.userInfo?.username)
-    })
-    const asd = await Promise.all(promises)
-    console.log(asd)
+    if (useStore.userInfo?.role === 'student') {
+      const promises = res.map(async (item) => {
+        return await isStudentInActivity(item._id, useStore.userInfo?.username)
+      })
+      const results = await Promise.all(promises)
+      const userActivities = res.filter((_item, index) => results[index].code === 200)
+      classifyActivities(userActivities as any)
+    }
+    else {
+      const promises = res.map(async (item) => {
+        return await isTeacherInActivity(item._id, useStore.userInfo?.username)
+      })
+      const results = await Promise.all(promises)
+      const userActivities = res.filter((_item, index) => results[index].code === 200)
+      classifyActivities(userActivities as any)
+    }
 
-    // 过滤出用户参与的活动
-    const userActivities = res.filter((item, index) => {
-      return asd[index].code === 200
-    })
-    console.log('用户参与的活动:', userActivities)
-
-    // 再根据时间分类活动
-    classifyActivities(userActivities as any)
-    console.log('进行中的活动:', ongoingList.value)
-    console.log('已结束的活动:', endedList.value)
+    const userDetail: any = await getUserDetail(useStore.userInfo?.username, useStore.userInfo?.role)
+    role.value = useStore.userInfo?.role
+    if (role.value === 'student') {
+      name.value = userDetail.data.data.name
+    }
+    else if (role.value === 'teacher') {
+      name.value = userDetail.data.name
+    }
   }
-  else {
-    // 先检查用户是否在每个活动中
-    const promises = res.map(async (item) => {
-      return await isTeacherInActivity(item._id, useStore.userInfo?.username)
-    })
-    const asd = await Promise.all(promises)
-    console.log(asd)
-
-    // 过滤出用户参与的活动
-    const userActivities = res.filter((item, index) => {
-      return asd[index].code === 200
-    })
-    console.log('用户参与的活动:', userActivities)
-
-    // 再根据时间分类活动
-    classifyActivities(userActivities as any)
-    console.log('进行中的活动:', ongoingList.value)
-    console.log('已结束的活动:', endedList.value)
+  catch (error) {
+    console.error('加载数据失败:', error)
+    uni.showToast({ title: '数据加载失败，请重试', icon: 'none' })
   }
-
-  // 从服务器查询用户信息
-  const userDetail: any = await getUserDetail(useStore.userInfo?.username, useStore.userInfo?.role)
-  console.log(userDetail)
-  // 新增赋值逻辑
-  role.value = useStore.userInfo?.role
-  if (role.value === 'student') {
-    name.value = userDetail.data.data.name
-  }
-  else if (role.value === 'teacher') {
-    name.value = userDetail.data.name
+  finally {
+    uni.hideLoading()
   }
 })
 </script>
