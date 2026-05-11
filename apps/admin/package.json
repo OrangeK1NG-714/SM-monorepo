@@ -3,8 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "vue-cli-service serve",
-    "build": "vue-cli-service build"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",
@@ -12,7 +13,6 @@
     "@wangeditor/editor": "^5.1.23",
     "@wangeditor/editor-for-vue": "^5.1.12",
     "axios": "^1.8.1",
-    "core-js": "^3.8.3",
     "element-plus": "^2.9.5",
     "moment": "^2.30.1",
     "tsparticles": "^3.8.1",
@@ -23,11 +23,8 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "@vue/cli-plugin-babel": "~5.0.0",
-    "@vue/cli-plugin-router": "~5.0.0",
-    "@vue/cli-plugin-vuex": "~5.0.0",
-    "@vue/cli-service": "~5.0.0",
+    "@vitejs/plugin-vue": "^5.2.4",
     "sass": "^1.32.7",
-    "sass-loader": "^12.0.0"
+    "vite": "^6.3.5"
   }
 }

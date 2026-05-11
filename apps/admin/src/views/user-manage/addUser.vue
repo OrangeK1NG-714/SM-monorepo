@@ -76,7 +76,6 @@ import { ref, reactive, watch } from "vue";
 import Upload from "@/components/upload/Upload.vue";
 import upload from "@/util/upload.js";
 import { UploadFilled } from '@element-plus/icons-vue'
-import uploadExcel from "@/util/upload.ts";
 import { useRouter } from "vue-router";
 import { ElMessage } from 'element-plus';
 
