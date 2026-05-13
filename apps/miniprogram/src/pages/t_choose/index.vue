@@ -10,18 +10,32 @@
 <script lang="ts" setup>
 import { getStudentMsg } from '@/api/stdInfo'
 import { cancelSelect, getMaxSelectNum, getSelectState, selectStudent, updateChoose } from '@/api/teaInfo'
-import { getActivityList, getChooseCount, getMaxChooseNum } from '@/api/useraction'
+import { getActivityList, getChooseCount } from '@/api/useraction'
 import { useUserStore } from '@/store/user'
 
 const IOS_BLUE = '#0A84FF'
 
 const userStore = useUserStore()
-console.log(userStore.userInfo)
 
-const tabbar = ref('t_choose')// 底部导航栏
+const tabbar = ref('t_choose')
 
 // 获取屏幕边界到安全区域距离
-const safeAreaInsets = ref<any>(null)
+let safeAreaInsets: any = null
+// #ifdef MP-WEIXIN
+const _sysInfo = uni.getWindowInfo()
+safeAreaInsets = _sysInfo.safeArea
+  ? {
+      top: _sysInfo.safeArea.top,
+      right: _sysInfo.windowWidth - _sysInfo.safeArea.right,
+      bottom: _sysInfo.windowHeight - _sysInfo.safeArea.bottom,
+      left: _sysInfo.safeArea.left,
+    }
+  : null
+// #endif
+// #ifndef MP-WEIXIN
+const _sysInfoFull = uni.getSystemInfoSync()
+safeAreaInsets = _sysInfoFull.safeAreaInsets
+// #endif
 
 // 表单数据
 const activeTab = ref('first')
@@ -413,6 +427,8 @@ async function categorizeByPriority(res: any) {
       console.error('获取学生数据失败:', error)
       return {
         ...item,
+        isChose: false,
+        finalTeacher: '',
         data: {
           name: '数据异常',
           gender: '',
@@ -542,10 +558,10 @@ function handleTabChange(e: any) {
               :class="item.isChose ? 'ios-btn--primary' : (item.finalTeacher && item.finalTeacher !== item.teacherId ? 'ios-btn--secondary' : 'ios-btn--secondary')"
               :style="item.isChose ? { backgroundColor: IOS_BLUE } : {}"
               style="padding: 18rpx 18rpx; font-size: 28rpx;"
-              :disabled="isSelecting || (item.finalTeacher.length > 0 && item.finalTeacher !== item.teacherId)"
+              :disabled="isSelecting || (item.finalTeacher?.length > 0 && item.finalTeacher !== item.teacherId)"
               @click="toggleSelect(item)"
             >
-              {{ item.finalTeacher === item.teacherId ? '已选' : (item.finalTeacher.length > 0 && item.finalTeacher !== item.teacherId) ? '被选走' : '选择' }}
+              {{ item.finalTeacher === item.teacherId ? '已选' : (item.finalTeacher?.length > 0 && item.finalTeacher !== item.teacherId) ? '被选走' : '选择' }}
             </button>
           </view>
         </view>
@@ -580,10 +596,10 @@ function handleTabChange(e: any) {
               :class="item.isChose ? 'ios-btn--primary' : (item.finalTeacher && item.finalTeacher !== item.teacherId ? 'ios-btn--secondary' : 'ios-btn--secondary')"
               :style="item.isChose ? { backgroundColor: IOS_BLUE } : {}"
               style="padding: 18rpx 18rpx; font-size: 28rpx;"
-              :disabled="isSelecting || (item.finalTeacher.length > 0 && item.finalTeacher !== item.teacherId)"
+              :disabled="isSelecting || (item.finalTeacher?.length > 0 && item.finalTeacher !== item.teacherId)"
               @click="toggleSelect(item)"
             >
-              {{ item.finalTeacher === item.teacherId ? '已选' : (item.finalTeacher.length > 0 && item.finalTeacher !== item.teacherId) ? '被选走' : '选择' }}
+              {{ item.finalTeacher === item.teacherId ? '已选' : (item.finalTeacher?.length > 0 && item.finalTeacher !== item.teacherId) ? '被选走' : '选择' }}
             </button>
           </view>
         </view>
@@ -618,10 +634,10 @@ function handleTabChange(e: any) {
               :class="item.isChose ? 'ios-btn--primary' : (item.finalTeacher && item.finalTeacher !== item.teacherId ? 'ios-btn--secondary' : 'ios-btn--secondary')"
               :style="item.isChose ? { backgroundColor: IOS_BLUE } : {}"
               style="padding: 18rpx 18rpx; font-size: 28rpx;"
-              :disabled="isSelecting || (item.finalTeacher.length > 0 && item.finalTeacher !== item.teacherId)"
+              :disabled="isSelecting || (item.finalTeacher?.length > 0 && item.finalTeacher !== item.teacherId)"
               @click="toggleSelect(item)"
             >
-              {{ item.finalTeacher === item.teacherId ? '已选' : (item.finalTeacher.length > 0 && item.finalTeacher !== item.teacherId) ? '被选走' : '选择' }}
+              {{ item.finalTeacher === item.teacherId ? '已选' : (item.finalTeacher?.length > 0 && item.finalTeacher !== item.teacherId) ? '被选走' : '选择' }}
             </button>
           </view>
         </view>

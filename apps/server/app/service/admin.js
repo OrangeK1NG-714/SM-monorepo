@@ -2,6 +2,11 @@
 
 const Service = require('egg').Service;
 const crypto = require('crypto')
+
+function escapeRegex(str) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 class AdminService extends Service {
     async addActivity(name, description, startDate, endDate, firstChooseStartDate, firstChooseEndDate, secondChooseStartDate, secondChooseEndDate, thirdChooseStartDate, thirdChooseEndDate, stdChooseStartDate, stdChooseEndDate, firstChooseCount, secondChooseCount, thirdChooseCount, stdChooseCount) {
         const { ctx } = this;
@@ -25,7 +30,7 @@ class AdminService extends Service {
         return res;
     }
 
-    async updateActivity(_id, name, description, startDate, endDate, firstChooseStartDate, firstChooseEndDate, secondChooseStartDate, secondChooseEndDate, thirdChooseStartDate, thirdChooseEndDate, stdChooseStartDate, stdChooseEndDate) {
+    async updateActivity(_id, name, description, startDate, endDate, firstChooseStartDate, firstChooseEndDate, secondChooseStartDate, secondChooseEndDate, thirdChooseStartDate, thirdChooseEndDate, stdChooseStartDate, stdChooseEndDate, firstChooseCount, secondChooseCount, thirdChooseCount, stdChooseCount) {
         const { ctx } = this;
         const res = await ctx.model.Activity.findByIdAndUpdate(_id,
             {
@@ -40,7 +45,11 @@ class AdminService extends Service {
                 thirdChooseStartDate,
                 thirdChooseEndDate,
                 stdChooseStartDate,
-                stdChooseEndDate
+                stdChooseEndDate,
+                firstChooseCount,
+                secondChooseCount,
+                thirdChooseCount,
+                stdChooseCount
             });
         if (!res) {
             return { code: 400, msg: '活动不存在' };
@@ -84,7 +93,7 @@ class AdminService extends Service {
         const query = {};
 
         // 添加条件查询
-        if (username) query.username = { $regex: new RegExp(username, 'i') };
+        if (username) query.username = { $regex: new RegExp(escapeRegex(username), 'i') };
         if (role) query.role = role;
 
         const res = await ctx.model.Userinfo.find(query);
@@ -183,10 +192,11 @@ class AdminService extends Service {
             // 确保username是字符串
             const usernameStr = String(username);
             // 添加username模糊查询条件
+            const escapedUsername = escapeRegex(usernameStr);
             conditions.push({
                 $or: [
-                    { teacherId: { $regex: usernameStr, $options: 'i' } },
-                    { studentId: { $regex: usernameStr, $options: 'i' } }
+                    { teacherId: { $regex: escapedUsername, $options: 'i' } },
+                    { studentId: { $regex: escapedUsername, $options: 'i' } }
                 ]
             });
         }
@@ -222,8 +232,7 @@ class AdminService extends Service {
         const { ctx } = this;
         const query = {};
         if (studentId) {
-            // 使用正则表达式进行模糊查询，不区分大小写
-            query.studentId = { $regex: studentId, $options: 'i' };
+            query.studentId = { $regex: escapeRegex(studentId), $options: 'i' };
         }
         if (activityId) {
             query.activityId = activityId;
@@ -246,7 +255,7 @@ class AdminService extends Service {
         const { ctx } = this;
         const query = {};
         if (studentId) {
-            query.studentId = { $regex: studentId, $options: 'i' };
+            query.studentId = { $regex: escapeRegex(studentId), $options: 'i' };
         }
         if (teacherId) {
             query.teacherId = teacherId;

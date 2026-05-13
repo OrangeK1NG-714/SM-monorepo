@@ -128,6 +128,13 @@ async function enterSystem(id: string) {
     if (useStore.userInfo.role === 'student') {
       const res = await isStudentInActivity(id, useStore.userInfo.username)
       if (res.code === 200) {
+        const detail: any = await getUserDetail(useStore.userInfo.username, 'student')
+        const studentData = detail?.data?.data
+        if (!studentData || Object.keys(studentData).length === 0 || !studentData.name) {
+          uni.showToast({ title: '请先完善个人信息', icon: 'none' })
+          uni.navigateTo({ url: '/pages/userMsg/index?mode=edit' })
+          return
+        }
         uni.navigateTo({ url: '/pages/s_choose/index' })
       }
       else {
@@ -193,10 +200,10 @@ onLoad(async () => {
     const userDetail: any = await getUserDetail(useStore.userInfo?.username, useStore.userInfo?.role)
     role.value = useStore.userInfo?.role
     if (role.value === 'student') {
-      name.value = userDetail.data.data.name
+      name.value = userDetail?.data?.data?.name || '同学'
     }
     else if (role.value === 'teacher') {
-      name.value = userDetail.data.name
+      name.value = userDetail?.data?.name || '老师'
     }
   }
   catch (error) {

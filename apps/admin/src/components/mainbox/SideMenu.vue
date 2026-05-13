@@ -54,16 +54,14 @@ import { HomeFilled, Avatar, Menu } from "@element-plus/icons-vue";
 import { useRoute } from "vue-router";
 import { useStore } from "vuex";
 const route = useRoute();
-console.log(route.fullPath);
 const store = useStore();
-// const vAdmin = {
-//   mounted(el) {
-//     console.log(el);
-//     if (store.state.userInfo.role !== 1) {
-//       el.parentNode.removeChild(el);
-//     }
-//   },
-// };
+const vAdmin = {
+  mounted(el) {
+    if (store.state.userInfo.role !== 'admin') {
+      el.parentNode && el.parentNode.removeChild(el);
+    }
+  },
+};
 </script>
 <style lang="scss" scoped>
 .el-aside {

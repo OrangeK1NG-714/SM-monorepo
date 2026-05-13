@@ -16,11 +16,17 @@ class TeainfoService extends Service {
             await choose.save()
             return { code: 200, msg: '学生选老师选项已修改', data: choose }
         }
+        return { code: 404, msg: '选择记录不存在' }
     }
 
     //老师选学生（新增到老师选学生表）
     async selectStudent(studentId, teacherId, activityId, data, order) {
-        const choose = await this.ctx.model.Final.create({ studentId, teacherId, activityId, data, order })
+        const student = await this.ctx.model.Student.findOne({ studentId })
+        const studentData = student?.data && Object.keys(student.data).length > 0 ? student.data : data
+        if (!studentData || Object.keys(studentData).length === 0) {
+            return { code: 400, msg: '该学生尚未完善个人信息，无法选择' }
+        }
+        const choose = await this.ctx.model.Final.create({ studentId, teacherId, activityId, data: studentData, order })
         return { code: 200, msg: '老师已选学生', data: choose }
     }
 

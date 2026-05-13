@@ -1,18 +1,14 @@
 import axios from "axios";
+import { ElMessage } from "element-plus";
 
 // 添加请求拦截器
 axios.interceptors.request.use(
     function (config) {
-        //请求发送前获取token值
         const token = localStorage.getItem("token");
-        //添加token令牌
         config.headers.Authorization = `${token}`
-        // console.log(config);
-        
         return config;
     },
     function (error) {
-        // 对请求错误做些什么
         return Promise.reject(error);
     }
 );
@@ -20,24 +16,19 @@ axios.interceptors.request.use(
 // 添加响应拦截器
 axios.interceptors.response.use(
     function (response) {
-        // 对响应数据做些什么
-        // console.log('响应拦截器 - 响应到达前', response);
-        // console.log(response.headers);
-        // console.log(123);
-        
-        // console.log(response.headers);
-        
         const { authorization } = response.headers;
-        // console.log(authorization);
-        
         authorization && localStorage.setItem("token", authorization)
-        // 例如：只返回响应数据
         return response;
     },
     function (error) {
         if (error.response && error.response.status === 401) {
             localStorage.removeItem("token")
             window.location.href = "#/login"
+        } else if (error.response) {
+            const msg = error.response.data?.msg || `请求失败 (${error.response.status})`
+            ElMessage.error(msg)
+        } else if (error.request) {
+            ElMessage.error("网络连接失败，请检查网络后重试")
         }
         return Promise.reject(error);
     }

@@ -50,6 +50,9 @@ class StdinfoService extends Service {
         }
 
         const student = await this.ctx.model.Student.findOne({ studentId });
+        if (!student || !student.data || Object.keys(student.data).length === 0 || !student.data.name) {
+            return { code: 400, msg: '请先完善个人信息后再选择导师' };
+        }
         const teacher = await this.ctx.model.Teacher.findOne({ teacherId });
         if (student && teacher && teacher.allowedMajors && teacher.allowedMajors.length > 0) {
             const studentMajor = student.data?.major || '普通';

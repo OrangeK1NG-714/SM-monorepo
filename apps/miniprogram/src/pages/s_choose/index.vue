@@ -310,9 +310,6 @@ async function handleSubmit() {
   isSubmitting.value = true
   uni.showLoading({ title: '提交中...' })
   try {
-    // 先请求一次性订阅消息授权（微信小程序）
-    await requestSubmitSubscribeMessage()
-
     const submitData = selectedMentors.value.map((mentor, index) => ({
       activityId: store.userInfo.activityId,
       studentId: store.userInfo.username,
@@ -327,11 +324,19 @@ async function handleSubmit() {
     for (const data of submitData) {
       await selectTeacher(data)
     }
-    uni.showToast({
-      title: '提交成功',
-      icon: 'success',
-      duration: 2000,
+    uni.hideLoading()
+
+    // 提交成功后，询问用户是否接收结果通知
+    const [modalErr, modalRes] = await uni.showModal({
+      title: '志愿提交成功',
+      content: '是否允许接收选导结果通知？允许后，当导师选择结果公布时将通过微信消息提醒您。',
+      confirmText: '允许通知',
+      cancelText: '暂不需要',
     })
+    if (!modalErr && modalRes.confirm) {
+      await requestSubmitSubscribeMessage()
+    }
+
     uni.redirectTo({ url: '/pages/myAmbition/index' })
   }
   catch (error: any) {

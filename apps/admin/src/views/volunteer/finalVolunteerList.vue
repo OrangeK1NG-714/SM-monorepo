@@ -114,25 +114,30 @@ onMounted(async () => {
 });
 
 const getTableData = async () => {
-    const res = await axios.get("/api/admin/getFinalList");
-    // console.log(res.data);
-    tableData.value = res.data;
-    const res1 = await axios.get("/api/admin/getActivityList");
-    // console.log(res1.data);
-    activityList.value = res1.data;
-    tableData.value.map(item => {
-        res1.data.map(activity => {
-            if (item.activityId === activity._id) {
-                item.activityName = activity.name;
-            }
+    try {
+        const res = await axios.get("/api/admin/getFinalList");
+        tableData.value = res.data;
+        const res1 = await axios.get("/api/admin/getActivityList");
+        activityList.value = res1.data;
+        tableData.value.map(item => {
+            res1.data.map(activity => {
+                if (item.activityId === activity._id) {
+                    item.activityName = activity.name;
+                }
+            })
         })
-    })
+    } catch (error) {
+        console.error('加载最终志愿数据失败:', error)
+    }
 };
 
 const getTeacherList = async () => {
-    const res = await axios.get("/api/teacher/detail");
-    // console.log(res.data.data, 12333);
-    teacherList.value = res.data.data;
+    try {
+        const res = await axios.get("/api/teacher/detail");
+        teacherList.value = res.data?.data || [];
+    } catch (error) {
+        console.error('加载教师列表失败:', error)
+    }
 }
 
 // 处理单个选择

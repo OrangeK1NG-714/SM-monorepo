@@ -108,33 +108,33 @@ onMounted(async () => {
 });
 
 const getTableData = async () => {
-    const res = await axios.get("/api/admin/getSelectedList");
+    try {
+        const res = await axios.get("/api/admin/getSelectedList");
 
-    // 先按createTime排序，再按order排序
-    res.data.sort((a, b) => {
-        // 先按 createTime 排序（字符串比较即可，因为 ISO 格式可以直接比较）
-        if (a.createTime < b.createTime) return -1;
-        if (a.createTime > b.createTime) return 1;
+        // 先按createTime排序，再按order排序
+        res.data.sort((a, b) => {
+            if (a.createTime < b.createTime) return -1;
+            if (a.createTime > b.createTime) return 1;
+            return a.order - b.order;
+        });
+        // 转换日期格式
+        tableData.value = res.data.map(item => ({
+            ...item,
+            createTime: dayjs(item.createTime).format('YYYY-MM-DD HH:mm:ss')
+        }));
 
-        // 如果 createTime 相同，再按 order 排序
-        return a.order - b.order;
-    });
-    // 转换日期格式
-    tableData.value = res.data.map(item => ({
-        ...item,
-        createTime: dayjs(item.createTime).format('YYYY-MM-DD HH:mm:ss')
-    }));
-
-    const res1 = await axios.get("/api/admin/getActivityList");
-    console.log(res1.data);
-    activityList.value = res1.data;
-    tableData.value.map(item => {
-        res1.data.map(activity => {
-            if (item.activityId === activity._id) {
-                item.activityName = activity.name;
-            }
+        const res1 = await axios.get("/api/admin/getActivityList");
+        activityList.value = res1.data;
+        tableData.value.map(item => {
+            res1.data.map(activity => {
+                if (item.activityId === activity._id) {
+                    item.activityName = activity.name;
+                }
+            })
         })
-    })
+    } catch (error) {
+        console.error('加载志愿数据失败:', error)
+    }
 };
 
 

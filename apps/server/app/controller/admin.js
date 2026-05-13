@@ -47,12 +47,14 @@ class AdminController extends Controller {
         const { ctx, service } = this;
         const { _id, name, description, startDate, endDate, firstChooseStartDate, firstChooseEndDate,
             secondChooseStartDate, secondChooseEndDate, thirdChooseStartDate, thirdChooseEndDate,
-            stdChooseStartDate, stdChooseEndDate, firstChooseNum, secondChooseNum, thirdChooseNum,
-            stdChooseNum } = ctx.request.body;
+            stdChooseStartDate, stdChooseEndDate,
+            firstChooseNum, secondChooseNum, thirdChooseNum, stdChooseNum,
+            firstChooseCount, secondChooseCount, thirdChooseCount, stdChooseCount } = ctx.request.body;
         const res = await service.admin.updateActivity(_id, name, description, startDate, endDate, firstChooseStartDate, firstChooseEndDate,
             secondChooseStartDate, secondChooseEndDate, thirdChooseStartDate, thirdChooseEndDate,
-            stdChooseStartDate, stdChooseEndDate, firstChooseNum, secondChooseNum, thirdChooseNum,
-            stdChooseNum);
+            stdChooseStartDate, stdChooseEndDate,
+            firstChooseCount ?? firstChooseNum, secondChooseCount ?? secondChooseNum,
+            thirdChooseCount ?? thirdChooseNum, stdChooseCount ?? stdChooseNum);
         ctx.send([], res.code, res.msg)
     }
     async addTeacherToActivity() {
