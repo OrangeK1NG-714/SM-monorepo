@@ -25,10 +25,10 @@ class StdinfoService extends Service {
     }
 
     //更新学生信息
-    async updateUserMsg(name, gender, studentId) {
+    async updateUserMsg(name, gender, studentId, grade, classNum, phone, gpa, direction, major) {
         const student = await this.ctx.model.Student.findOne({ studentId });
         if (student) {
-            student.data = { name, gender, studentId };
+            student.data = { name, gender, studentId, grade, classNum, phone, gpa, direction, major };
             await student.save();
             return { code: 200, msg: '学生信息已更新', data: student };
         }

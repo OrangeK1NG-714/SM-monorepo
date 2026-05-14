@@ -19,24 +19,6 @@ const userStore = useUserStore()
 
 const tabbar = ref('t_choose')
 
-// 获取屏幕边界到安全区域距离
-let safeAreaInsets: any = null
-// #ifdef MP-WEIXIN
-const _sysInfo = uni.getWindowInfo()
-safeAreaInsets = _sysInfo.safeArea
-  ? {
-      top: _sysInfo.safeArea.top,
-      right: _sysInfo.windowWidth - _sysInfo.safeArea.right,
-      bottom: _sysInfo.windowHeight - _sysInfo.safeArea.bottom,
-      left: _sysInfo.safeArea.left,
-    }
-  : null
-// #endif
-// #ifndef MP-WEIXIN
-const _sysInfoFull = uni.getSystemInfoSync()
-safeAreaInsets = _sysInfoFull.safeAreaInsets
-// #endif
-
 // 表单数据
 const activeTab = ref('first')
 const scrollHeight = ref(0)
@@ -486,7 +468,7 @@ function handleTabChange(e: any) {
 </script>
 
 <template>
-  <view class="ios-page" :style="{ paddingTop: `${safeAreaInsets?.top || 0}px` }">
+  <view class="ios-page">
     <view class="px-5 pt-6">
       <view class="ios-title">
         学生选择

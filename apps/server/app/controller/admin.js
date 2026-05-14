@@ -6,8 +6,6 @@ class AdminController extends Controller {
     async getUserList() {
         const { ctx, service } = this;
         const res = await service.admin.getUserList();
-        console.log(res);
-
         ctx.body = res
     }
 
@@ -60,9 +58,6 @@ class AdminController extends Controller {
     async addTeacherToActivity() {
         const { ctx, service } = this;
         const { activityId, teacherId, studentId } = ctx.request.body;
-        console.log(activityId, teacherId, studentId);
-
-
         const res = await service.admin.addTeacherToActivity(activityId, teacherId, studentId);
         ctx.send([], res.code, res.msg)
     }

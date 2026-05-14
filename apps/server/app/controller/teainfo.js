@@ -7,8 +7,6 @@ class TeainfoController extends Controller {
     async getTeaDetail() {
         const { ctx, service } = this
         const res = await service.teainfo.getTeaDetail()
-        console.log(res);
-
         ctx.body = res
     }
     //老师选学生-即（修改学生选老师选项）

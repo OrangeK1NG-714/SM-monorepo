@@ -76,13 +76,6 @@ class UserinfoController extends Controller {
         const res = await service.userinfo.getChooseDetail(activityId, studentId);
         ctx.body = res;
     }
-    // //获取当前时间API
-    // async getCurrentTime() {
-    //     const { ctx, service } = this;
-    //     const res = await service.userinfo.getCurrentTime();
-    //     ctx.body = res;
-    // }
-    
     // 刷新token
     async refreshToken() {
         const { ctx } = this;
@@ -99,9 +92,15 @@ class UserinfoController extends Controller {
             if (decoded.type !== 'refresh') {
                 return ctx.send([], 401, '无效的refresh token');
             }
-            
-            // 生成新的access token
-            const accessToken = ctx.generateToken(decoded.uid);
+
+            // 查询用户获取 role 信息
+            const user = await ctx.model.Userinfo.findById(decoded.uid);
+            if (!user) {
+                return ctx.send([], 401, '用户不存在');
+            }
+
+            // 生成新的access token（包含 role）
+            const accessToken = ctx.generateToken(decoded.uid, user.role);
             
             ctx.send({ accessToken }, 200, 'token刷新成功');
         } catch (error) {

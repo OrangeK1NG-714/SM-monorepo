@@ -60,9 +60,6 @@ module.exports = app => {
 
   //把对应的老师添加到活动中去
   router.post('/api/admin/addTeacherToActivity', app.middleware.jwt({ requiredRole: 'admin' }), controller.admin.addTeacherToActivity)
-  //把对应的学生添加到活动中去
-  // router.post('/api/admin/addStudentToActivity', app.middleware.jwt({ requiredRole: 'admin' }), controller.admin.addStudentToActivity)
-
   //查询某活动的所有老师
   router.get('/api/student/getTeacherList', app.middleware.jwt(), controller.stdinfo.getTeacherListInActivity)
   //查询某学生是否在活动中
@@ -84,9 +81,7 @@ module.exports = app => {
   //更新用户信息
   router.put('/api/admin/updateUser', app.middleware.jwt({ requiredRole: 'admin' }), controller.admin.updateUser)
 
-  //查询所有活动（已有）
-  // router.get('/api/admin/getActivityList', app.middleware.jwt({ requiredRole: 'admin' }), controller.admin.getActivityList)
-  //查询单个用户信息
+  //查询用户信息
   router.get('/api/admin/getUserInfo', app.middleware.jwt({ requiredRole: 'admin' }), controller.admin.getUserInfo)
   //重置某个用户密码
   router.post('/api/admin/resetPassword', app.middleware.jwt({ requiredRole: 'admin' }), controller.admin.resetPassword)
@@ -119,10 +114,6 @@ module.exports = app => {
   //查询学生的最终志愿
   router.get('/api/admin/getFinalChoose', app.middleware.jwt(), controller.admin.getFinalChoose)
 
-  // //获取当前时间API
-  // router.get('/api/user/getCurrentTime', app.middleware.jwt(), controller.userinfo.getCurrentTime)
-
-  ////////////////////////////////////未写入apifox////////////////////////////////////
   //管理员上传pdf
   router.post('/api/teacher/uploadTeacherResume', app.middleware.jwt({ requiredRole: 'admin' }), controller.admin.uploadTeacherResume)
   //查询某位老师简历

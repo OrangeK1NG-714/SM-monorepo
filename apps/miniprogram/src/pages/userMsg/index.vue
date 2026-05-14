@@ -29,28 +29,6 @@ interface StudentForm {
 defineOptions({
   name: 'UserMsgPage',
 })
-// 获取屏幕边界到安全区域距离
-let safeAreaInsets
-let systemInfo
-
-// #ifdef MP-WEIXIN
-// 微信小程序使用新的API
-systemInfo = uni.getWindowInfo()
-safeAreaInsets = systemInfo.safeArea
-  ? {
-      top: systemInfo.safeArea.top,
-      right: systemInfo.windowWidth - systemInfo.safeArea.right,
-      bottom: systemInfo.windowHeight - systemInfo.safeArea.bottom,
-      left: systemInfo.safeArea.left,
-    }
-  : null
-// #endif
-
-// #ifndef MP-WEIXIN
-// 其他平台继续使用uni API
-systemInfo = uni.getSystemInfoSync()
-safeAreaInsets = systemInfo.safeAreaInsets
-// #endif
 
 const genderArray = ['男', '女']
 const majorArray = ['普通', '中本']
@@ -372,10 +350,7 @@ async function handleAgree() {
 </script>
 
 <template>
-  <view
-    class="ios-page"
-    :style="{ paddingTop: `${safeAreaInsets?.top || 0}px` }"
-  >
+  <view class="ios-page">
     <view class="px-5 pt-6">
       <view class="ios-title">
         {{ isEditMode ? '修改个人信息' : '学生基本信息' }}
@@ -441,8 +416,7 @@ async function handleAgree() {
               class="ios-input"
               type="number"
               placeholder="请输入学号"
-              :disabled="isEditMode"
-              :style="isEditMode ? { color: '#9CA3AF' } : {}"
+              :disabled="false"
               @focus="focusedField = 'studentId'"
               @blur="focusedField = null"
             >

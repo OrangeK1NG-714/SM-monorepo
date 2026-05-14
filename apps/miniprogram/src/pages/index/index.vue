@@ -161,27 +161,6 @@ async function enterSystem(id: string) {
   }
 }
 
-// 安全区域处理保持不变
-let safeAreaInsets
-let systemInfo
-
-// #ifdef MP-WEIXIN
-systemInfo = uni.getWindowInfo()
-safeAreaInsets = systemInfo.safeArea
-  ? {
-      top: systemInfo.safeArea.top,
-      right: systemInfo.windowWidth - systemInfo.safeArea.right,
-      bottom: systemInfo.windowHeight - systemInfo.safeArea.bottom,
-      left: systemInfo.safeArea.left,
-    }
-  : null
-// #endif
-
-// #ifndef MP-WEIXIN
-systemInfo = uni.getSystemInfoSync()
-safeAreaInsets = systemInfo.safeAreaInsets
-// #endif
-
 onLoad(async () => {
   uni.showLoading({ title: '加载中...' })
   try {
@@ -217,7 +196,7 @@ onLoad(async () => {
 </script>
 
 <template>
-  <view class="ios-page" :style="{ paddingTop: `${safeAreaInsets?.top || 0}px` }">
+  <view class="ios-page">
     <view class="px-5 pt-6">
       <template v-if="role === 'student'">
         <view class="ios-header-row">

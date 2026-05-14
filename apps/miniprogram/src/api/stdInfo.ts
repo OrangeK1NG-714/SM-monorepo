@@ -1,4 +1,3 @@
-import { API_BASE_URL } from '@/config'
 // import type { IActivityList } from './types/userAction'
 import { http } from '@/utils/http'
 
@@ -31,7 +30,7 @@ interface ISelectTeacher {
  * 查询某个活动中老师列表信息
  */
 export function getTeacherListInActivity(activityId: string) {
-  return http.get<ITeacherListInActivity>(`${API_BASE_URL}/api/student/getTeacherList`, {
+  return http.get<ITeacherListInActivity>(`/api/student/getTeacherList`, {
     activityId,
   }, undefined, { requireAuth: true })
 }
@@ -39,7 +38,7 @@ export function getTeacherListInActivity(activityId: string) {
  * 查询某学生是否在活动中
  */
 export function isStudentInActivity(activityId: string, studentId: string) {
-  return http.get<IStudentListInActivity>(`${API_BASE_URL}/api/student/isInActivity`, {
+  return http.get<IStudentListInActivity>(`/api/student/isInActivity`, {
     activityId,
     studentId,
   }, undefined, { requireAuth: true })
@@ -48,7 +47,7 @@ export function isStudentInActivity(activityId: string, studentId: string) {
  * 新增学生选老师选项
  */
 export function selectTeacher(data: ISelectTeacher) {
-  return http.post(`${API_BASE_URL}/api/student/selectTeacher`, data, undefined, undefined, { requireAuth: true })
+  return http.post(`/api/student/selectTeacher`, data, undefined, undefined, { requireAuth: true })
 }
 
 interface IWriteStdInfo {
@@ -66,7 +65,7 @@ interface IWriteStdInfo {
  * 写入学生信息
  */
 export function writeStdInfo(data: IWriteStdInfo) {
-  return http.post(`${API_BASE_URL}/api/user/writeMsg`, data, undefined, undefined, { requireAuth: true })
+  return http.post(`/api/user/writeMsg`, data, undefined, undefined, { requireAuth: true })
 }
 
 interface StudentData {
@@ -91,7 +90,7 @@ interface IStdInfo {
  * 查询学生信息
  */
 export function getStudentMsg(studentId: string) {
-  return http.get<IStdInfo>(`${API_BASE_URL}/api/student/getMsg`, {
+  return http.get<IStdInfo>(`/api/student/getMsg`, {
     studentId,
   }, undefined, { requireAuth: true })
 }
@@ -104,21 +103,21 @@ interface IUpdatePassword {
  *  修改学生密码
  */
 export function updateStdPassword(data: IUpdatePassword) {
-  return http.post(`${API_BASE_URL}/api/admin/resetPassword`, data, undefined, undefined, { requireAuth: true })
+  return http.post(`/api/admin/resetPassword`, data, undefined, undefined, { requireAuth: true })
 }
 
 /**
  * 上报学生微信 openid（传入 wx.login 返回的 code，后端换取并保存）
  */
 export function saveOpenid(code: string, studentId: string) {
-  return http.post(`${API_BASE_URL}/api/student/saveOpenid`, { code, studentId }, undefined, undefined, { requireAuth: true })
+  return http.post(`/api/student/saveOpenid`, { code, studentId }, undefined, undefined, { requireAuth: true })
 }
 
 /**
  * 查询学生的最终志愿
  */
 export function getStudentFinalChoice(studentId: string, activityId: string) {
-  return http.get(`${API_BASE_URL}/api/admin/getFinalChoose`, {
+  return http.get(`/api/admin/getFinalChoose`, {
     studentId,
     activityId,
   }, undefined, { requireAuth: true })

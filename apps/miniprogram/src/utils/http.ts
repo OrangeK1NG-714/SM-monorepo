@@ -49,6 +49,9 @@ function clearAllToken() {
  * 执行实际请求
  */
 function executeRequest<T>(options: CustomRequestOptions): Promise<IResData<T>> {
+  if (options.url && options.url.startsWith('/')) {
+    options.url = `${API_BASE_URL}${options.url}`
+  }
   return new Promise((resolve, reject) => {
     uni.request({
       ...options,
@@ -106,7 +109,7 @@ async function doRefreshToken(): Promise<string | null> {
 
   try {
     const res = await uni.request({
-      url: `${API_BASE_URL}/api/user/refresh`,
+      url: `${API_BASE_URL}/api/user/refresh`, // doRefreshToken 直接调用 uni.request，需手动拼接
       method: 'POST',
       data: { refreshToken },
       dataType: 'json',

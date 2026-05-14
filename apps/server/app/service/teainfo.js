@@ -21,6 +21,10 @@ class TeainfoService extends Service {
 
     //老师选学生（新增到老师选学生表）
     async selectStudent(studentId, teacherId, activityId, data, order) {
+        const existing = await this.ctx.model.Final.findOne({ studentId, teacherId, activityId })
+        if (existing) {
+            return { code: 400, msg: '该学生已被选择，请勿重复操作' }
+        }
         const student = await this.ctx.model.Student.findOne({ studentId })
         const studentData = student?.data && Object.keys(student.data).length > 0 ? student.data : data
         if (!studentData || Object.keys(studentData).length === 0) {
@@ -42,10 +46,7 @@ class TeainfoService extends Service {
         if (teacherId) query.teacherId = teacherId
         if (activityId) query.activityId = activityId
         if (studentId) query.studentId = studentId
-        console.log(query)
-        console.log(123)
         const res = await this.ctx.model.Final.find(query)
-        console.log(res)
         return res
     }
 

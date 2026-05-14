@@ -56,7 +56,7 @@ module.exports = appInfo => {
   }
   // 部署时需修改：加认证 mongodb://用户名:密码@127.0.0.1:27017/ms-da-projects
   config.mongoose = {
-    url: 'mongodb://root:123456@127.0.0.1:27017/ms-da-projects?authSource=admin',
+    url: 'mongodb://127.0.0.1:27017/ms-da-projects',
   }
   //取消安全威胁csrf的防范
   config.security = {

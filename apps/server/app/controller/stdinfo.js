@@ -8,19 +8,15 @@ class StdinfoController extends Controller {
     //写入学生信息
     async writeUserMsg() {
         const { ctx, service } = this
-        // console.log(ctx, service );
-
         const { name, gender, studentId, grade, classNum, phone, gpa, direction, major } = ctx.request.body
-
         const res = await service.stdinfo.writeUserMsg(name, gender, studentId, grade, classNum, phone, gpa, direction, major)
-        console.log(res);
         ctx.send([], res.code, res.msg)
     }
     //更新学生信息
     async updateUserMsg() {
         const { ctx, service } = this
-        const { name, gender, studentId } = ctx.request.body
-        const res = await service.stdinfo.updateUserMsg(name, gender, studentId)
+        const { name, gender, studentId, grade, classNum, phone, gpa, direction, major } = ctx.request.body
+        const res = await service.stdinfo.updateUserMsg(name, gender, studentId, grade, classNum, phone, gpa, direction, major)
         ctx.send([], res.code, res.msg)
     }
     //新增学生选老师选项
