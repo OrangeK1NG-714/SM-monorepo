@@ -370,6 +370,11 @@ function navigateToProgress() {
   })
 }
 
+// 回到首页
+function navigateToHome() {
+  uni.navigateBack({ delta: 99, fail: () => uni.reLaunch({ url: '/pages/index/index' }) })
+}
+
 // 阻止触摸移动
 function preventTouchMove() {}
 
@@ -720,17 +725,20 @@ onLoad(async () => {
       class="bottom-nav fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white px-3 py-4"
     >
       <button
-        class="ios-btn nav-switch-btn mx-1 flex-1"
-        :class="isProgressPage ? 'ios-btn--secondary' : 'ios-btn--primary'"
-        :style="isProgressPage ? {} : { backgroundColor: IOS_BLUE }"
+        class="ios-btn ios-btn--secondary nav-switch-btn mx-1 flex-1"
         @tap="navigateToMyChoices"
       >
         我的志愿
       </button>
       <button
-        class="ios-btn nav-switch-btn mx-1 flex-1"
-        :class="isProgressPage ? 'ios-btn--primary' : 'ios-btn--secondary'"
-        :style="isProgressPage ? { backgroundColor: IOS_BLUE } : {}"
+        class="ios-btn ios-btn--primary nav-switch-btn mx-1 flex-1"
+        :style="{ backgroundColor: IOS_BLUE }"
+        @tap="navigateToHome"
+      >
+        回到首页
+      </button>
+      <button
+        class="ios-btn ios-btn--secondary nav-switch-btn mx-1 flex-1"
         @tap="navigateToProgress"
       >
         选择页面

@@ -2,3 +2,5 @@
 typings/
 # Egg.js run directory
 run/
+# Logs
+logs/

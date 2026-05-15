@@ -27,8 +27,7 @@ module.exports = appInfo => {
       return 'json'
     },
     json(err, ctx) {
-      console.log(err);
-      //自定义错误时的响应体
+      ctx.logger.error('[onerror] %s %s – %s', ctx.method, ctx.url, err.message);
       if (err.status === 422) {
         if (err.errors[0].message == 'required') {
           ctx.body = {
@@ -37,7 +36,6 @@ module.exports = appInfo => {
           }
           ctx.status = 400
         } else {
-          console.log('else');
           ctx.body = {
             msg: err.errors[0].message,
             field: err.errors[0].field
@@ -51,7 +49,6 @@ module.exports = appInfo => {
         }
         ctx.status = err.status
       }
-
     }
   }
   // 部署时需修改：加认证 mongodb://用户名:密码@127.0.0.1:27017/ms-da-projects
@@ -86,6 +83,18 @@ module.exports = appInfo => {
     allowMethods:'GET,HEAD,PUT,POST,DELETE,PATCH',
     exposeHeaders: ['Authorization']
   }
+  config.logger = {
+    level: 'INFO',
+    consoleLevel: 'INFO',
+    disableConsoleAfterReady: true,
+  };
+
+  config.logrotator = {
+    maxFileSize: 50 * 1024 * 1024,
+    maxFiles: 10,
+    maxDays: 7,
+  };
+
   // add your user config here
   const userConfig = {
     // myAppName: 'egg',

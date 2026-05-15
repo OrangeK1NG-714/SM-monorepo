@@ -21,8 +21,6 @@ const userStore = useUserStore()
 const list = ref<any[]>([])
 const sortedList = ref<any[]>([])
 const mentor = ref<string>('')
-const isProgressPage = ref(false)
-
 async function loadData() {
   const res: any = await getChooseCountWithActivityId(userStore.userInfo.activityId, userStore.userInfo.username)
   if (res.length === 0) {
@@ -51,13 +49,9 @@ function navigateToProgress() {
   uni.navigateTo({ url: '/pages/s_choose/index' })
 }
 
-// 导航到我的志愿
-function navigateToMyChoices() {
-  uni.showToast({
-    title: '在此页面中',
-    icon: 'none',
-    duration: 1000,
-  })
+// 回到首页
+function navigateToHome() {
+  uni.navigateBack({ delta: 99, fail: () => uni.reLaunch({ url: '/pages/index/index' }) })
 }
 
 onLoad(async () => {
@@ -135,20 +129,17 @@ onPullDownRefresh(async () => {
     <!-- 底部固定导航栏 -->
     <view class="bottom-nav fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white px-3 py-4">
       <button
-        class="ios-btn nav-switch-btn mx-1 flex-1"
-        :class="isProgressPage ? 'ios-btn--secondary' : 'ios-btn--primary'"
-        :style="isProgressPage ? {} : { backgroundColor: IOS_BLUE }"
-        @tap="navigateToMyChoices"
-      >
-        我的志愿
-      </button>
-      <button
-        class="ios-btn nav-switch-btn mx-1 flex-1"
-        :class="isProgressPage ? 'ios-btn--primary' : 'ios-btn--secondary'"
-        :style="isProgressPage ? { backgroundColor: IOS_BLUE } : {}"
+        class="ios-btn ios-btn--secondary nav-switch-btn mx-1 flex-1"
         @tap="navigateToProgress"
       >
         选择页面
+      </button>
+      <button
+        class="ios-btn ios-btn--primary nav-switch-btn mx-1 flex-1"
+        :style="{ backgroundColor: IOS_BLUE }"
+        @tap="navigateToHome"
+      >
+        回到首页
       </button>
     </view>
   </view>
